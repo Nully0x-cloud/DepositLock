@@ -1,0 +1,137 @@
+@import "tailwindcss";
+
+@theme inline {
+  --font-sans: var(--font-geist), ui-sans-serif, system-ui, -apple-system,
+    "Segoe UI", Roboto, sans-serif;
+  --font-serif: var(--font-fraunces), ui-serif, Georgia, "Times New Roman",
+    serif;
+  --font-mono: var(--font-geist-mono), ui-monospace, SFMono-Regular, Menlo,
+    monospace;
+}
+
+@theme {
+  /* Surfaces */
+  --color-cream: #f5f2ea;
+  --color-cream-raised: #faf8f3;
+  --color-parchment: #fcfbf7;
+  --color-sand: #ece7dc;
+  --color-sand-deep: #e3ddce;
+  --color-line: #dcd5c5;
+  --color-line-soft: #e8e2d5;
+
+  /* Brand */
+  --color-forest: #173d2d;
+  --color-forest-deep: #102a20;
+  --color-moss: #315c46;
+  --color-sage: #6f8d7c;
+
+  /* Text */
+  --color-ink: #1e211f;
+  --color-muted: #575d58;
+  --color-subtle: #767c76;
+
+  /* States */
+  --color-protected: #1f6f4a;
+  --color-protected-soft: #e1ede7;
+  --color-pending: #8a5a0b;
+  --color-pending-soft: #f4e8d0;
+  --color-dispute: #9b3b2c;
+  --color-dispute-soft: #f6e2dd;
+  --color-closed: #5b615c;
+  --color-closed-soft: #e7e5df;
+}
+
+@layer base {
+  html {
+    scroll-behavior: smooth;
+    scroll-padding-top: 5.5rem;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  body {
+    background-color: #f5f2ea;
+    color: #1e211f;
+    font-family: var(--font-sans);
+    text-rendering: optimizeLegibility;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4 {
+    text-wrap: balance;
+  }
+
+  p {
+    text-wrap: pretty;
+  }
+
+  :where(a, button, [role="button"], input, select, textarea, summary):focus-visible {
+    outline: 2px solid #173d2d;
+    outline-offset: 2px;
+    border-radius: 4px;
+  }
+
+  ::selection {
+    background-color: #173d2d;
+    color: #f5f2ea;
+  }
+}
+
+@utility eyebrow {
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+
+@utility hairline {
+  border: 1px solid var(--color-line);
+}
+
+@utility surface-card {
+  background-color: var(--color-parchment);
+  border: 1px solid var(--color-line);
+}
+
+@layer utilities {
+  @keyframes dl-fade-in {
+    from {
+      opacity: 0;
+    }
+    to {
+      opacity: 1;
+    }
+  }
+
+  @keyframes dl-slide-in {
+    from {
+      transform: translateX(-100%);
+    }
+    to {
+      transform: translateX(0);
+    }
+  }
+
+  .animate-fade-in {
+    animation: dl-fade-in 180ms ease-out both;
+  }
+
+  .animate-slide-in {
+    animation: dl-slide-in 220ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+  }
+}
