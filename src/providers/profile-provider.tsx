@@ -10,6 +10,11 @@ import {
   useSyncExternalStore,
 } from "react";
 import { profileStore } from "@/lib/profile/profile-store";
+import {
+  pullRemoteProfile,
+  pushRemoteProfile,
+  reconcileProfile,
+} from "@/lib/profile/profile-service";
 import type { ProfileFormValues, UserProfile } from "@/types/profile";
 
 export type ProfileContextValue = {
@@ -53,15 +58,38 @@ export function ProfileProvider({ children }: { children: React.ReactNode }) {
 
   const walletAddress = publicKey ? publicKey.toBase58() : null;
 
+  // Remote seam. When Supabase is configured, the wallet-bound profile is
+  // pulled once per wallet and adopted only if it is newer than the local one.
+  // Nothing is ever wiped when the remote has no row or is unreachable, so
+  // Phase 2 local-only behaviour is preserved exactly when Supabase is absent.
+  useEffect(() => {
+    let cancelled = false;
+
+    void pullRemoteProfile(walletAddress).then((remote) => {
+      if (cancelled) return;
+      const adopted = reconcileProfile(profileStore.getSnapshot(), remote);
+      if (adopted) profileStore.replace(adopted);
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [walletAddress]);
+
   const createProfile = useCallback(
-    (values: ProfileFormValues) => profileStore.create(values, walletAddress),
+    (values: ProfileFormValues) => {
+      const result = profileStore.create(values, walletAddress);
+      if (result.ok) void pushRemoteProfile(result.profile);
+      return result;
+    },
     [walletAddress],
   );
 
-  const updateProfile = useCallback(
-    (values: ProfileFormValues) => profileStore.update(values),
-    [],
-  );
+  const updateProfile = useCallback((values: ProfileFormValues) => {
+    const result = profileStore.update(values);
+    if (result.ok) void pushRemoteProfile(result.profile);
+    return result;
+  }, []);
 
   const clearProfile = useCallback(() => profileStore.clear(), []);
 

@@ -22,6 +22,11 @@ export type ProfileStore = {
   update(values: ProfileFormValues): ProfileCreateResult;
   /** Re-binds the wallet identity without touching anything else. */
   syncWallet(walletAddress: string | null): void;
+  /**
+   * Adopts a profile loaded from the remote seam. An absent remote never wipes
+   * local state, and an older remote never overwrites a newer local edit.
+   */
+  replace(profile: UserProfile | null): void;
   clear(): void;
 };
 
@@ -92,6 +97,14 @@ export function createProfileStore(repository: ProfileRepository): ProfileStore 
       if (!current) return;
       if (current.walletAddress === walletAddress) return;
       commit(updateProfile(current, { walletAddress }));
+    },
+    replace(profile) {
+      const current = load();
+      if (!profile) return;
+      if (current && Date.parse(current.updatedAt) >= Date.parse(profile.updatedAt)) {
+        return;
+      }
+      commit(profile);
     },
     clear() {
       commit(null);
