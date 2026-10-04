@@ -1,54 +1,16 @@
 "use client";
 
-import { Menu, Wallet, X } from "lucide-react";
-import Link from "next/link";
+import { Menu, UserRound, Wallet, X } from "lucide-react";
 import { usePathname } from "next/navigation";
 import { useEffect, useState, type ReactNode } from "react";
 import { Brand } from "@/components/layout/brand";
 import { Container } from "@/components/layout/container";
 import { AppNavList, AppSidebar } from "@/components/layout/app-sidebar";
-import { CURRENT_USER } from "@/data/tenancies";
+import { HeaderIdentity, WalletControl } from "@/components/wallet/wallet-control";
+import { useProfile } from "@/hooks/use-profile";
+import { useWalletIdentity } from "@/hooks/use-wallet-identity";
 import { sectionForPath } from "@/lib/navigation";
 import { cn, initialsOf } from "@/lib/utils";
-
-function WalletPlaceholder() {
-  return (
-    <div
-      className="hidden items-center gap-2 rounded-full border border-line bg-cream-raised px-3 py-2 sm:flex"
-      title="Wallet integration arrives in a later phase"
-    >
-      <Wallet aria-hidden className="size-4 text-subtle" strokeWidth={1.8} />
-      <span className="text-xs font-medium text-muted">Not connected</span>
-      <span aria-hidden className="size-1.5 rounded-full bg-pending" />
-      <span className="sr-only">Wallet not connected yet</span>
-    </div>
-  );
-}
-
-function UserIdentity() {
-  return (
-    <Link
-      href="/app/profile"
-      className="flex items-center gap-2.5 rounded-full border border-transparent py-1 pl-1 pr-2 transition-colors hover:border-line hover:bg-cream-raised"
-    >
-      <span
-        aria-hidden
-        className="grid size-8 shrink-0 place-items-center rounded-full bg-forest text-[0.6875rem] font-semibold text-cream"
-      >
-        {initialsOf(CURRENT_USER.name)}
-      </span>
-      <span className="hidden text-left leading-tight sm:block">
-        <span className="block text-[0.8125rem] font-semibold text-ink">
-          {CURRENT_USER.name}
-        </span>
-        <span className="block text-[0.6875rem] text-subtle">
-          {CURRENT_USER.role}
-        </span>
-      </span>
-      <span className="sr-only">Open profile</span>
-    </Link>
-  );
-}
 
 type AppShellProps = {
   children: ReactNode;
@@ -58,6 +20,8 @@ export function AppShell({ children }: AppShellProps) {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
   const section = sectionForPath(pathname);
+  const { profile } = useProfile();
+  const wallet = useWalletIdentity();
 
   useEffect(() => {
     if (!open) return;
@@ -111,8 +75,11 @@ export function AppShell({ children }: AppShellProps) {
               </div>
 
               <div className="flex items-center gap-2 sm:gap-3">
-                <WalletPlaceholder />
-                <UserIdentity />
+                <WalletControl />
+                <HeaderIdentity
+                  profileName={profile?.fullName ?? null}
+                  walletConnected={wallet.connected}
+                />
               </div>
             </Container>
           </header>
@@ -164,22 +131,39 @@ export function AppShell({ children }: AppShellProps) {
               <div className="flex items-center gap-2.5">
                 <span
                   aria-hidden
-                  className="grid size-9 place-items-center rounded-full bg-forest text-xs font-semibold text-cream"
+                  className="grid size-9 shrink-0 place-items-center rounded-full bg-forest text-xs font-semibold text-cream"
                 >
-                  {initialsOf(CURRENT_USER.name)}
+                  {profile ? (
+                    initialsOf(profile.fullName)
+                  ) : (
+                    <UserRound className="size-4" strokeWidth={1.8} />
+                  )}
                 </span>
                 <span className="min-w-0 leading-tight">
                   <span className="block truncate text-sm font-semibold text-ink">
-                    {CURRENT_USER.name}
+                    {profile ? profile.fullName : "No profile yet"}
                   </span>
                   <span className="block truncate text-xs text-muted">
-                    {CURRENT_USER.email}
+                    {profile
+                      ? profile.email
+                      : "Create one from the profile page"}
                   </span>
                 </span>
               </div>
-              <p className="flex items-center gap-2 rounded-full border border-line bg-parchment px-3 py-2 text-xs text-muted">
+              <p
+                className={cn(
+                  "flex items-center gap-2 rounded-full border border-line px-3 py-2 text-xs",
+                  wallet.connected
+                    ? "bg-cream-raised text-ink"
+                    : "bg-parchment text-muted",
+                )}
+              >
                 <Wallet aria-hidden className="size-3.5" strokeWidth={1.8} />
-                Wallet not connected
+                {wallet.connected ? (
+                  <span className="font-mono">{wallet.shortAddress}</span>
+                ) : (
+                  "Wallet not connected"
+                )}
               </p>
             </div>
           </div>
