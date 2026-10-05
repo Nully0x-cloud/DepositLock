@@ -9,13 +9,17 @@ export type SupabaseConfig = {
 /**
  * Reads the public Supabase configuration.
  *
- * Phase 3A is local-only: these values come from `supabase status` and live in
- * `.env.local` (gitignored). Nothing here is a secret — the anon key is a
- * published, RLS-constrained key. Server/service keys are deliberately absent.
+ * These values come from `.env.local` (gitignored). Nothing here is a secret —
+ * the anon/publishable key is a published, RLS-constrained key. Server/service
+ * keys are deliberately absent. Both env names are accepted: newer projects
+ * issue `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`, older ones the anon JWT.
  */
 export function readSupabaseConfig(): SupabaseConfig | null {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL?.trim();
-  const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY?.trim();
+  const anonKey = (
+    process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY?.trim() ||
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY?.trim()
+  );
 
   if (!url || !anonKey) return null;
   return { url, anonKey };

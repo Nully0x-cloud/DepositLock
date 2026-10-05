@@ -1,12 +1,12 @@
 -- ============================================================================
--- DepositLock — Phase 3A local seed
+-- DepositLock — Phase 3A seed
 --
 -- One coherent story, no filler rows:
 --
---   * 18 Camden Street, Dublin 2  — Michael O'Connor (landlord) lets to
+--   * 18 Camden Street, Dublin 2 — Michael O'Connor (landlord) lets to
 --     Sarah Byrne (tenant). Deposit €1,800, rent €2,100/mo, status
 --     `protected`, move-in evidence captured.
---   * 7 Stoneybatter Lane, Dublin 7 — Sarah Byrne is the LANDLAND here and
+--   * 7 Stoneybatter Lane, Dublin 7 — Sarah Byrne is the LANDLORD here and
 --     lets to Aoife Kelly. Deposit €1,200, rent €1,450/mo, status
 --     `awaiting_deposit`. This is what proves roles are tenancy-scoped:
 --     Sarah is a tenant on one record and a landlord on another.
@@ -17,10 +17,16 @@
 -- keys, no signing material. Fixed UUIDs keep the seed idempotent to read.
 --
 -- Phase 3B: `profiles.id` references `auth.users.id`, so the seed first
--- creates a local Supabase Auth user (plus the `web3` identity GoTrue writes
--- after a verified Sign-In-With-Solana) for every demo profile. These are
--- local development rows only — no password, no session, nothing that can
--- sign in — and this file is never applied to the hosted project.
+-- creates a Supabase Auth user (plus the `web3` identity GoTrue writes
+-- after a verified Sign-In-With-Solana) for every demo profile. These rows
+-- carry no password and no signing material — the `DEVWALLET-…` provider
+-- ids are not real Solana addresses, so nothing here can ever sign in.
+--
+-- Environments: applied by `npx supabase db reset` locally, and applied
+-- once to the hosted Phase 3B project so the pgTAP suite (which asserts
+-- this exact story) runs identically in both. The suite expects the
+-- pristine shape below, so run it before any sign-in checks that add
+-- their own demo identities.
 -- ============================================================================
 
 -- ---------------------------------------------------------------------------

@@ -2,8 +2,9 @@
 /**
  * Sign-In-With-Solana integration check (Phase 3B).
  *
- * Talks to a *running local Supabase stack* over HTTP exactly the way the
- * browser does — anon key only, no service-role key anywhere:
+ * Talks to whatever Supabase project `.env.local` points at (local stack or
+ * hosted) over HTTP exactly the way the browser does — publishable/anon key
+ * only, no service-role key anywhere:
  *
  *   1. builds a SIWS message, signs it with a real ed25519 keypair
  *      (development-only fixed seed — it can never hold funds),
@@ -16,7 +17,7 @@
  *        - `verified_wallet_address()` is not callable by client roles,
  *        - other people's tenancies read as empty, not as an error.
  *
- * Run with the local stack up:  npm run test:siws
+ * Run:  npm run test:siws
  */
 
 import { readFileSync } from "node:fs";
@@ -28,7 +29,7 @@ const URI = "http://localhost:3000/";
 const HOST = "localhost:3000";
 
 // Fixed development seed: clearly not a real key, deterministic so repeated
-// runs reuse the same local auth user instead of littering the dev database.
+// runs reuse the same auth user instead of littering the database.
 const DEV_SEED = Buffer.from(
   "depositlock-local-siws-dev-seed-not-a-real-key-0001",
   "utf8",
@@ -36,8 +37,13 @@ const DEV_SEED = Buffer.from(
 
 loadDotEnvLocal();
 
-const BASE = process.env.SUPABASE_URL || "http://127.0.0.1:54321";
-const ANON = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+const BASE =
+  process.env.SUPABASE_URL ||
+  process.env.NEXT_PUBLIC_SUPABASE_URL ||
+  "http://127.0.0.1:54321";
+const ANON =
+  process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY ||
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
 let passed = 0;
 let failed = 0;
@@ -170,8 +176,10 @@ async function main() {
       JSON.stringify(signInResult.body),
     );
     console.error(
-      "Is [auth.web3.solana] enabled in supabase/config.toml? " +
-        "Apply config changes with: npx supabase stop && npx supabase start",
+      "Is Sign-In-With-Solana enabled for this project? Locally that is " +
+        "[auth.web3.solana] in supabase/config.toml (apply with: npx supabase " +
+        "stop && npx supabase start); on a hosted project it is the Web3 " +
+        "provider toggle in the Supabase dashboard under Authentication.",
     );
     process.exit(1);
   }

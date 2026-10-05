@@ -40,6 +40,23 @@ describe("readSupabaseConfig", () => {
 
     expect(readSupabaseConfig()).toEqual({ url: LOCAL_URL, anonKey: ANON_KEY });
   });
+
+  it("accepts the publishable key name and prefers it over the anon name", async () => {
+    const { readSupabaseConfig } = await loadClient();
+    vi.stubEnv("NEXT_PUBLIC_SUPABASE_URL", LOCAL_URL);
+    vi.stubEnv("NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY", ` ${ANON_KEY} `);
+    vi.stubEnv("NEXT_PUBLIC_SUPABASE_ANON_KEY", "stale_jwt_value");
+
+    expect(readSupabaseConfig()).toEqual({ url: LOCAL_URL, anonKey: ANON_KEY });
+  });
+
+  it("works with only the publishable key set", async () => {
+    const { readSupabaseConfig } = await loadClient();
+    vi.stubEnv("NEXT_PUBLIC_SUPABASE_URL", LOCAL_URL);
+    vi.stubEnv("NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY", ANON_KEY);
+
+    expect(readSupabaseConfig()).toEqual({ url: LOCAL_URL, anonKey: ANON_KEY });
+  });
 });
 
 describe("isSupabaseConfigured", () => {
