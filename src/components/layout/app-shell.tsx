@@ -7,6 +7,7 @@ import { Brand } from "@/components/layout/brand";
 import { Container } from "@/components/layout/container";
 import { AppNavList, AppSidebar } from "@/components/layout/app-sidebar";
 import { HeaderIdentity, WalletControl } from "@/components/wallet/wallet-control";
+import { VerifyWalletButton } from "@/components/wallet/verify-wallet-button";
 import { useProfile } from "@/hooks/use-profile";
 import { useWalletIdentity } from "@/hooks/use-wallet-identity";
 import { sectionForPath } from "@/lib/navigation";
@@ -75,6 +76,7 @@ export function AppShell({ children }: AppShellProps) {
               </div>
 
               <div className="flex items-center gap-2 sm:gap-3">
+                <VerifyWalletButton />
                 <WalletControl />
                 <HeaderIdentity
                   profileName={profile?.fullName ?? null}

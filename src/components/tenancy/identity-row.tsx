@@ -58,7 +58,7 @@ export function IdentityRow({
         >
           {party.role === "tenant" ? "Tenant" : "Landlord"}
         </p>
-        {showMeta ? (
+        {showMeta && party.email ? (
           <p
             className={cn(
               "mt-0.5 truncate text-xs",

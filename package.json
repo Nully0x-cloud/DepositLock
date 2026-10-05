@@ -8,6 +8,7 @@
     "start": "next start",
     "lint": "eslint",
     "test": "vitest run",
+    "test:siws": "node scripts/verify-siws.mjs",
     "test:db": "supabase test db",
     "db:start": "supabase start",
     "db:stop": "supabase stop",

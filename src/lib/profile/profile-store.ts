@@ -16,6 +16,12 @@ export type ProfileStore = {
   /** Always null on the server so hydration matches. */
   getServerSnapshot(): UserProfile | null;
   subscribe(listener: Listener): () => void;
+  /**
+   * The raw local cache from storage, independent of the snapshot. Used only
+   * to seed the create form when the wallet matches (§26) — never to render
+   * a profile.
+   */
+  getCached(): UserProfile | null;
   /** Validates then persists a brand-new profile. */
   create(values: ProfileFormValues, walletAddress: string | null): ProfileCreateResult;
   /** Validates then persists edits to name/email only. */
@@ -23,10 +29,17 @@ export type ProfileStore = {
   /** Re-binds the wallet identity without touching anything else. */
   syncWallet(walletAddress: string | null): void;
   /**
-   * Adopts a profile loaded from the remote seam. An absent remote never wipes
-   * local state, and an older remote never overwrites a newer local edit.
+   * Adopts a profile loaded from the remote. Remote is the authority
+   * (Phase 3B): timestamps never veto the row the server just returned.
    */
-  replace(profile: UserProfile | null): void;
+  adopt(profile: UserProfile): void;
+  /**
+   * Drops the in-memory snapshot WITHOUT touching storage. Used when the
+   * session ends or the signed-in user has no remote row yet: the UI shows
+   * "no profile", while the local copy survives as a prefill seed (§26).
+   */
+  reset(): void;
+  /** Drops the profile from memory and storage (explicit wipe). */
   clear(): void;
 };
 
@@ -60,6 +73,9 @@ export function createProfileStore(repository: ProfileRepository): ProfileStore 
   return {
     getSnapshot: load,
     getServerSnapshot: () => null,
+    getCached() {
+      return repository.read();
+    },
     subscribe(listener) {
       listeners.add(listener);
       return () => {
@@ -98,13 +114,12 @@ export function createProfileStore(repository: ProfileRepository): ProfileStore 
       if (current.walletAddress === walletAddress) return;
       commit(updateProfile(current, { walletAddress }));
     },
-    replace(profile) {
-      const current = load();
-      if (!profile) return;
-      if (current && Date.parse(current.updatedAt) >= Date.parse(profile.updatedAt)) {
-        return;
-      }
+    adopt(profile) {
       commit(profile);
+    },
+    reset() {
+      snapshot = null;
+      notify();
     },
     clear() {
       commit(null);

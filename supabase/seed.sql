@@ -15,7 +15,102 @@
 --
 -- Wallet addresses are obviously development-only (`DEVWALLET-…`); no real
 -- keys, no signing material. Fixed UUIDs keep the seed idempotent to read.
+--
+-- Phase 3B: `profiles.id` references `auth.users.id`, so the seed first
+-- creates a local Supabase Auth user (plus the `web3` identity GoTrue writes
+-- after a verified Sign-In-With-Solana) for every demo profile. These are
+-- local development rows only — no password, no session, nothing that can
+-- sign in — and this file is never applied to the hosted project.
 -- ============================================================================
+
+-- ---------------------------------------------------------------------------
+-- Local auth users behind the demo profiles
+-- ---------------------------------------------------------------------------
+
+insert into auth.users (id, aud, role, raw_app_meta_data, raw_user_meta_data, created_at, updated_at)
+values
+  (
+    '11111111-1111-4111-8111-111111111111',
+    'authenticated',
+    'authenticated',
+    '{"provider": "web3", "providers": ["web3"]}'::jsonb,
+    jsonb_build_object(
+      'sub', 'web3:solana:DEVWALLET-00000000000000000000SARAH00001',
+      'custom_claims', jsonb_build_object(
+        'address', 'DEVWALLET-00000000000000000000SARAH00001',
+        'chain', 'solana',
+        'domain', 'localhost:3000'
+      )
+    ),
+    now(), now()
+  ),
+  (
+    '22222222-2222-4222-8222-222222222222',
+    'authenticated',
+    'authenticated',
+    '{"provider": "web3", "providers": ["web3"]}'::jsonb,
+    jsonb_build_object(
+      'sub', 'web3:solana:DEVWALLET-00000000000000000000MICHAEL01',
+      'custom_claims', jsonb_build_object(
+        'address', 'DEVWALLET-00000000000000000000MICHAEL01',
+        'chain', 'solana',
+        'domain', 'localhost:3000'
+      )
+    ),
+    now(), now()
+  ),
+  (
+    '33333333-3333-4333-8333-333333333333',
+    'authenticated',
+    'authenticated',
+    '{"provider": "web3", "providers": ["web3"]}'::jsonb,
+    jsonb_build_object(
+      'sub', 'web3:solana:DEVWALLET-00000000000000000000AOIFE0001',
+      'custom_claims', jsonb_build_object(
+        'address', 'DEVWALLET-00000000000000000000AOIFE0001',
+        'chain', 'solana',
+        'domain', 'localhost:3000'
+      )
+    ),
+    now(), now()
+  ),
+  (
+    '44444444-4444-4444-8444-444444444444',
+    'authenticated',
+    'authenticated',
+    '{"provider": "web3", "providers": ["web3"]}'::jsonb,
+    jsonb_build_object(
+      'sub', 'web3:solana:DEVWALLET-00000000000000000000NIAMH0001',
+      'custom_claims', jsonb_build_object(
+        'address', 'DEVWALLET-00000000000000000000NIAMH0001',
+        'chain', 'solana',
+        'domain', 'localhost:3000'
+      )
+    ),
+    now(), now()
+  )
+on conflict (id) do nothing;
+
+insert into auth.identities (provider, provider_id, user_id, identity_data, last_sign_in_at, created_at, updated_at)
+select
+  'web3',
+  u.raw_user_meta_data ->> 'sub',
+  u.id,
+  jsonb_build_object(
+    'sub', u.raw_user_meta_data ->> 'sub',
+    'custom_claims', u.raw_user_meta_data -> 'custom_claims'
+  ),
+  u.created_at,
+  u.created_at,
+  u.created_at
+from auth.users u
+where u.id in (
+  '11111111-1111-4111-8111-111111111111',
+  '22222222-2222-4222-8222-222222222222',
+  '33333333-3333-4333-8333-333333333333',
+  '44444444-4444-4444-8444-444444444444'
+)
+on conflict (provider_id, provider) do nothing;
 
 -- ---------------------------------------------------------------------------
 -- Profiles
@@ -59,20 +154,20 @@ on conflict (id) do nothing;
 
 insert into public.properties (
   id, created_by_profile_id, address_line_1, address_line_2, city, county,
-  postal_code, country, property_type, cover_image_url
+  postal_code, country, property_type, cover_image_url, bedrooms
 )
 values
   (
     'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
     '22222222-2222-4222-8222-222222222222',
     '18 Camden Street', null, 'Dublin', 'Dublin',
-    'D02 XY34', 'IE', 'apartment', '/properties/camden-street.jpg'
+    'D02 XY34', 'IE', 'apartment', '/properties/camden-street.jpg', 2
   ),
   (
     'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb',
     '11111111-1111-4111-8111-111111111111',
     '7 Stoneybatter Lane', null, 'Dublin', 'Dublin',
-    'D07 K2R4', 'IE', 'house', '/properties/stoneybatter-lane.jpg'
+    'D07 K2R4', 'IE', 'house', '/properties/stoneybatter-lane.jpg', 2
   )
 on conflict (id) do nothing;
 

@@ -62,7 +62,7 @@ export interface Tenancy {
   imageUrl: string;
   imageAlt: string;
   startDate: string;
-  endDate: string;
+  endDate: string | null;
   rentMonthly: number;
   depositAmount: number;
   status: TenancyStatus;

@@ -27,6 +27,7 @@ export type PropertyRecord = {
   postalCode: string | null;
   country: string;
   propertyType: string;
+  bedrooms: number | null;
   coverImageUrl: string | null;
   createdAt: string;
   updatedAt: string;

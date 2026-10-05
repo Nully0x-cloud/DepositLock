@@ -28,6 +28,8 @@ export type ProfileFormErrors = {
   fullName?: string;
   email?: string;
   walletAddress?: string;
+  /** Form-level failure (server rejected the save, network, RLS, …). */
+  form?: string;
 };
 
 export type ProfileValidationResult = {

@@ -5,6 +5,7 @@ import { useEffect, useId, useState, type FormEvent } from "react";
 import { Button } from "@/components/ui/button";
 import { useProfile } from "@/hooks/use-profile";
 import { useWalletIdentity } from "@/hooks/use-wallet-identity";
+import { useAuth } from "@/providers/auth-provider";
 import type { ProfileFormErrors, ProfileFormValues } from "@/types/profile";
 import { cn } from "@/lib/utils";
 
@@ -23,23 +24,28 @@ export function ProfileForm({
   onSaved,
   className,
 }: ProfileFormProps) {
-  const { profile, walletAddress, createProfile, updateProfile } = useProfile();
+  const { profile, walletAddress, prefill, createProfile, updateProfile } = useProfile();
+  const { configured: authConfigured } = useAuth();
   const { connected, shortAddress, connecting } = useWalletIdentity();
 
   const nameId = useId();
   const emailId = useId();
   const walletId = useId();
 
-  const [values, setValues] = useState<ProfileFormValues>(
-    mode === "edit" && profile
-      ? { fullName: profile.fullName, email: profile.email }
-      : EMPTY_VALUES,
-  );
+  const [values, setValues] = useState<ProfileFormValues>(() => {
+    if (mode === "edit" && profile) {
+      return { fullName: profile.fullName, email: profile.email };
+    }
+    // Create: seed from the local cache only when it belongs to the wallet
+    // being verified (§26). The seed is a convenience, never authority.
+    return prefill ?? EMPTY_VALUES;
+  });
   const [errors, setErrors] = useState<ProfileFormErrors>({});
   const [saved, setSaved] = useState(false);
+  const [busy, setBusy] = useState(false);
 
-  // Values are seeded from the profile when the form mounts; the profile is
-  // already resolved synchronously by the store, so no effect is needed.
+  // Values are seeded from the profile/prefill when the form mounts; the
+  // store already resolves them synchronously, so no effect is needed.
 
   useEffect(() => {
     if (!saved) return;
@@ -49,10 +55,10 @@ export function ProfileForm({
 
   function setField(field: keyof ProfileFormValues, value: string) {
     setValues((current) => ({ ...current, [field]: value }));
-    setErrors((current) => ({ ...current, [field]: undefined }));
+    setErrors((current) => ({ ...current, [field]: undefined, form: undefined }));
   }
 
-  function handleSubmit(event: FormEvent<HTMLFormElement>) {
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
     if (mode === "create" && !walletAddress) {
@@ -60,17 +66,23 @@ export function ProfileForm({
       return;
     }
 
-    const result = mode === "create" ? createProfile(values) : updateProfile(values);
+    setBusy(true);
+    try {
+      const result =
+        mode === "create" ? await createProfile(values) : await updateProfile(values);
 
-    if (!result.ok) {
-      setErrors(result.errors);
-      setSaved(false);
-      return;
+      if (!result.ok) {
+        setErrors(result.errors);
+        setSaved(false);
+        return;
+      }
+
+      setErrors({});
+      setSaved(true);
+      onSaved?.();
+    } finally {
+      setBusy(false);
     }
-
-    setErrors({});
-    setSaved(true);
-    onSaved?.();
   }
 
   const fieldClass = (hasError?: string) =>
@@ -169,6 +181,15 @@ export function ProfileForm({
         </div>
       </div>
 
+      {errors.form ? (
+        <p
+          role="alert"
+          className="mt-5 flex items-start gap-2 rounded-xl border border-dispute/40 bg-dispute-soft px-4 py-3 text-sm text-dispute"
+        >
+          {errors.form}
+        </p>
+      ) : null}
+
       {saved ? (
         <p
           role="status"
@@ -180,11 +201,15 @@ export function ProfileForm({
       ) : null}
 
       <div className="mt-6 flex flex-wrap items-center gap-3">
-        <Button type="submit" disabled={connecting}>
-          {mode === "create" ? "Create Profile" : "Save changes"}
+        <Button type="submit" disabled={connecting || busy}>
+          {busy
+            ? "Saving…"
+            : mode === "create"
+              ? "Create Profile"
+              : "Save changes"}
         </Button>
         {onCancel ? (
-          <Button type="button" variant="ghost" onClick={onCancel}>
+          <Button type="button" variant="ghost" onClick={onCancel} disabled={busy}>
             Cancel
           </Button>
         ) : null}
@@ -192,8 +217,9 @@ export function ProfileForm({
 
       <p className="mt-5 flex items-start gap-2 text-xs leading-relaxed text-muted">
         <Info aria-hidden className="mt-0.5 size-3.5 shrink-0" />
-        Your profile is stored in this browser for now and moves with your
-        tenancy records later.
+        {authConfigured
+          ? "Your profile belongs to your verified wallet and appears on every tenancy you join."
+          : "Your profile is stored in this browser for now and moves with your tenancy records later."}
       </p>
     </form>
   );

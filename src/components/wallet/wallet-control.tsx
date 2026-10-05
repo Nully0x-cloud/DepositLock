@@ -6,6 +6,8 @@ import {
   Copy,
   ExternalLink,
   LogOut,
+  ShieldCheck,
+  Unplug,
   UserRound,
   Wallet,
 } from "lucide-react";
@@ -13,8 +15,10 @@ import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { WalletIcon } from "@/components/wallet/wallet-icon";
+import { useSiwsWallet } from "@/hooks/use-siws-wallet";
 import { useWalletIdentity } from "@/hooks/use-wallet-identity";
 import { explorerAddressUrl, explorerClusterLabel } from "@/lib/solana/explorer";
+import { useAuth } from "@/providers/auth-provider";
 import { cn } from "@/lib/utils";
 
 function CopyState({ copied }: { copied: boolean }) {
@@ -33,6 +37,8 @@ function CopyState({ copied }: { copied: boolean }) {
  */
 export function WalletControl() {
   const identity = useWalletIdentity();
+  const { status: authStatus, signing, signInWithWallet, signOut, clearError } = useAuth();
+  const solanaWallet = useSiwsWallet();
   const [open, setOpen] = useState(false);
   const [copied, setCopied] = useState(false);
   const wrapperRef = useRef<HTMLDivElement>(null);
@@ -41,6 +47,18 @@ export function WalletControl() {
   const close = useCallback(() => {
     setOpen(false);
   }, []);
+
+  const handleVerify = useCallback(() => {
+    if (!solanaWallet) return;
+    close();
+    clearError();
+    void signInWithWallet(solanaWallet);
+  }, [clearError, close, signInWithWallet, solanaWallet]);
+
+  const handleSignOut = useCallback(() => {
+    close();
+    void signOut();
+  }, [close, signOut]);
 
   useEffect(() => {
     if (!open) return;
@@ -199,13 +217,52 @@ export function WalletControl() {
 
           <div className="my-1 h-px bg-line-soft" />
 
+          {authStatus === "authenticated" ? (
+            <>
+              <p className="flex items-center gap-2.5 px-2.5 py-1.5 text-[0.6875rem] font-semibold uppercase tracking-[0.1em] text-protected">
+                <Check aria-hidden className="size-3.5" strokeWidth={2.5} />
+                Wallet verified for this session
+              </p>
+              <button
+                type="button"
+                role="menuitem"
+                onClick={handleSignOut}
+                disabled={signing}
+                className="flex w-full items-center gap-2.5 rounded-xl px-2.5 py-2.5 text-left text-sm text-ink transition-colors hover:bg-sand disabled:opacity-60"
+              >
+                <LogOut aria-hidden className="size-4" strokeWidth={1.9} />
+                Sign out
+              </button>
+            </>
+          ) : null}
+
+          {authStatus === "unauthenticated" && solanaWallet ? (
+            <>
+              <p className="px-2.5 py-1.5 text-[0.6875rem] text-muted">
+                This wallet has not been verified yet.
+              </p>
+              <button
+                type="button"
+                role="menuitem"
+                onClick={handleVerify}
+                disabled={signing}
+                className="flex w-full items-center gap-2.5 rounded-xl px-2.5 py-2.5 text-left text-sm font-medium text-forest transition-colors hover:bg-sand disabled:opacity-60"
+              >
+                <ShieldCheck aria-hidden className="size-4" strokeWidth={1.9} />
+                {signing ? "Check your wallet…" : "Verify wallet"}
+              </button>
+            </>
+          ) : null}
+
+          <div className="my-1 h-px bg-line-soft" />
+
           <button
             type="button"
             role="menuitem"
             onClick={handleDisconnect}
             className="flex w-full items-center gap-2.5 rounded-xl px-2.5 py-2.5 text-left text-sm text-dispute transition-colors hover:bg-dispute-soft"
           >
-            <LogOut aria-hidden className="size-4" strokeWidth={1.9} />
+            <Unplug aria-hidden className="size-4" strokeWidth={1.9} />
             Disconnect
           </button>
         </div>

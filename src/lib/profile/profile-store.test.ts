@@ -134,6 +134,46 @@ describe("createProfileStore", () => {
     expect(memory.peek()).toBeNull();
   });
 
+  it("adopts a remote profile regardless of timestamps (remote is authority)", () => {
+    const memory = memoryRepository();
+    const store = createProfileStore(memory.repo);
+    store.create(VALID, WALLET);
+
+    const older = {
+      ...memory.peek()!,
+      fullName: "Sarah Byrne (remote)",
+      updatedAt: "2020-01-01T00:00:00.000Z",
+    };
+    store.adopt(older);
+
+    expect(store.getSnapshot()?.fullName).toBe("Sarah Byrne (remote)");
+    expect(memory.peek()?.fullName).toBe("Sarah Byrne (remote)");
+  });
+
+  it("drops the snapshot on reset but keeps the cache for prefill (§26)", () => {
+    const memory = memoryRepository();
+    const store = createProfileStore(memory.repo);
+    store.create(VALID, WALLET);
+
+    store.reset();
+
+    expect(store.getSnapshot()).toBeNull();
+    expect(store.getCached()).not.toBeNull();
+    expect(memory.peek()).not.toBeNull();
+  });
+
+  it("reads the cache independently of the snapshot", () => {
+    const memory = memoryRepository();
+    const store = createProfileStore(memory.repo);
+
+    expect(store.getCached()).toBeNull();
+    store.create(VALID, WALLET);
+    store.reset();
+
+    expect(store.getSnapshot()).toBeNull();
+    expect(store.getCached()?.fullName).toBe("Sarah Byrne");
+  });
+
   it("notifies subscribers on change and stops after unsubscribe", () => {
     const store = createProfileStore(memoryRepository().repo);
     const listener = vi.fn();

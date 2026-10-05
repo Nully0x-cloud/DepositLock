@@ -37,8 +37,12 @@ export function formatShortDate(value: string | Date): string {
   return shortDateFormatter.format(date);
 }
 
-export function formatDateRange(start: string | Date, end: string | Date): string {
-  return `${formatShortDate(start)} — ${formatShortDate(end)}`;
+export function formatDateRange(
+  start: string | Date,
+  end: string | Date | null,
+): string {
+  if (!end) return `${formatShortDate(start)} - Ongoing`;
+  return `${formatShortDate(start)} - ${formatShortDate(end)}`;
 }
 
 export function initialsOf(name: string): string {

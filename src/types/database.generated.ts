@@ -217,13 +217,13 @@ isOneToOne: false
                   ]
                 },"properties": {
                   Row: {
-                    "address_line_1": string,"address_line_2": string | null,"city": string,"country": string,"county": string | null,"cover_image_url": string | null,"created_at": string,"created_by_profile_id": string,"id": string,"postal_code": string | null,"property_type": string,"updated_at": string
+                    "address_line_1": string,"address_line_2": string | null,"bedrooms": number | null,"city": string,"country": string,"county": string | null,"cover_image_url": string | null,"created_at": string,"created_by_profile_id": string,"id": string,"postal_code": string | null,"property_type": string,"updated_at": string
                   }
                   Insert: {
-                    "address_line_1": string,"address_line_2"?: string | null,"city": string,"country"?: string,"county"?: string | null,"cover_image_url"?: string | null,"created_at"?: string,"created_by_profile_id": string,"id"?: string,"postal_code"?: string | null,"property_type": string,"updated_at"?: string
+                    "address_line_1": string,"address_line_2"?: string | null,"bedrooms"?: number | null,"city": string,"country"?: string,"county"?: string | null,"cover_image_url"?: string | null,"created_at"?: string,"created_by_profile_id": string,"id"?: string,"postal_code"?: string | null,"property_type": string,"updated_at"?: string
                   }
                   Update: {
-                    "address_line_1"?: string,"address_line_2"?: string | null,"city"?: string,"country"?: string,"county"?: string | null,"cover_image_url"?: string | null,"created_at"?: string,"created_by_profile_id"?: string,"id"?: string,"postal_code"?: string | null,"property_type"?: string,"updated_at"?: string
+                    "address_line_1"?: string,"address_line_2"?: string | null,"bedrooms"?: number | null,"city"?: string,"country"?: string,"county"?: string | null,"cover_image_url"?: string | null,"created_at"?: string,"created_by_profile_id"?: string,"id"?: string,"postal_code"?: string | null,"property_type"?: string,"updated_at"?: string
                   }
                   Relationships: [
                     {
@@ -363,6 +363,9 @@ isOneToOne: false
                            },
 "is_tenancy_tenant":
 { Args: { "p_profile_id": string,"p_tenancy_id": string }; Returns: boolean
+                           },
+"verified_wallet_address":
+{ Args: { "p_user_id": string }; Returns: string
                            }
           }
           Enums: {

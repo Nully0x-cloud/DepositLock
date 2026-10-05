@@ -118,6 +118,21 @@ export async function listTenancyParticipants(
   return { ok: true, data: result.data.map(toParticipantRecord) };
 }
 
+/**
+ * Participant rows for every tenancy the caller can see — one query instead
+ * of N per list item. RLS narrows the table to the caller's tenancies, so
+ * this can never leak other people's participant lists.
+ */
+export async function listVisibleParticipants(
+  client: Client,
+): Promise<RepositoryResult<TenancyParticipantRecord[]>> {
+  const result = await fromResult<TenancyParticipant[]>(
+    client.from("tenancy_participants").select("*").order("tenancy_id"),
+  );
+  if (!result.ok) return result;
+  return { ok: true, data: result.data.map(toParticipantRecord) };
+}
+
 export type CreateTenancyInput = {
   propertyId: string;
   landlordProfileId: string;

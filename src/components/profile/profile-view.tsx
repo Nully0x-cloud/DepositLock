@@ -4,8 +4,11 @@ import {
   Check,
   Copy,
   ExternalLink,
+  LogOut,
   Pencil,
+  RefreshCw,
   ShieldCheck,
+  TriangleAlert,
   UserRound,
   Wallet,
 } from "lucide-react";
@@ -14,12 +17,14 @@ import { PageHeader } from "@/components/app/page-header";
 import { Container } from "@/components/layout/container";
 import { ProfileForm } from "@/components/profile/profile-form";
 import { ConnectToContinue } from "@/components/wallet/connect-to-continue";
-import { useProfile } from "@/hooks/use-profile";
+import { useAuthenticatedProfile } from "@/hooks/use-authenticated-profile";
+import { useSiwsWallet } from "@/hooks/use-siws-wallet";
+import { useTenancies } from "@/hooks/use-tenancies";
 import { useWalletIdentity } from "@/hooks/use-wallet-identity";
+import { useAuth } from "@/providers/auth-provider";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { TENANCIES } from "@/data/tenancies";
 import { explorerAddressUrl, explorerClusterLabel } from "@/lib/solana/explorer";
 import { cn, initialsOf } from "@/lib/utils";
 
@@ -46,6 +51,87 @@ function Field({
         {value}
       </p>
     </div>
+  );
+}
+
+/**
+ * Ownership proof (§42): one tap, calm copy, explicit "no funds move".
+ * Only rendered for a connected wallet with no session.
+ */
+function VerifyCard() {
+  const { signing, error, signInWithWallet, clearError } = useAuth();
+  const wallet = useWalletIdentity();
+  const solanaWallet = useSiwsWallet();
+
+  return (
+    <Card padding="lg">
+      <div className="flex items-center gap-3 border-b border-line-soft pb-5">
+        <span
+          aria-hidden
+          className="grid size-14 shrink-0 place-items-center rounded-full bg-cream-raised text-forest"
+        >
+          <ShieldCheck className="size-6" strokeWidth={1.75} />
+        </span>
+        <div className="min-w-0">
+          <h2 className="text-lg font-semibold text-ink">
+            Verify wallet ownership
+          </h2>
+          <p className="text-sm text-muted">
+            Linked to {wallet.shortAddress} on {wallet.walletName}
+          </p>
+        </div>
+      </div>
+
+      <p className="mt-5 text-sm leading-relaxed text-muted">
+        Sign this message to continue — no funds will move and no transaction
+        is created. Your signature proves you own this wallet and opens your
+        DepositLock records.
+      </p>
+
+      {error ? (
+        <p
+          role="alert"
+          className="mt-4 rounded-xl border border-dispute/40 bg-dispute-soft px-4 py-3 text-sm text-dispute"
+        >
+          {error}
+        </p>
+      ) : null}
+
+      <div className="mt-6">
+        <Button
+          onClick={() => {
+            clearError();
+            if (solanaWallet) void signInWithWallet(solanaWallet);
+          }}
+          disabled={signing || !solanaWallet}
+          className="w-full"
+        >
+          <ShieldCheck aria-hidden className="size-4" strokeWidth={1.9} />
+          {signing ? "Check your wallet…" : "Verify Wallet"}
+        </Button>
+      </div>
+    </Card>
+  );
+}
+
+function ProfileSkeleton() {
+  return (
+    <Card padding="lg" aria-busy="true" className="animate-pulse">
+      <div className="flex items-center gap-4">
+        <div className="size-14 rounded-full bg-sand" />
+        <div className="flex-1 space-y-2">
+          <div className="h-5 w-40 rounded bg-sand" />
+          <div className="h-4 w-56 rounded bg-sand" />
+        </div>
+      </div>
+      <div className="mt-6 grid gap-4 sm:grid-cols-2">
+        <div className="h-16 rounded-xl bg-cream-raised" />
+        <div className="h-16 rounded-xl bg-cream-raised" />
+        <div className="h-16 rounded-xl bg-cream-raised" />
+        <div className="h-16 rounded-xl bg-cream-raised" />
+      </div>
+      <p className="sr-only">Loading your profile…</p>
+    </Card>
   );
 }
 
@@ -176,17 +262,11 @@ function WalletCard() {
   );
 }
 
-function RolesCard({ profileName }: { profileName: string }) {
-  const rows = TENANCIES.filter(
-    (tenancy) =>
-      tenancy.tenant.name === profileName ||
-      tenancy.landlord.name === profileName,
-  ).map((tenancy) => ({
-    id: tenancy.id,
-    address: `${tenancy.address}, ${tenancy.locality}`,
-    role: tenancy.tenant.name === profileName ? "Tenant" : "Landlord",
-  }));
-
+function RolesCard({
+  tenancyAddresses,
+}: {
+  tenancyAddresses: { id: string; address: string; role: string }[];
+}) {
   return (
     <Card padding="lg">
       <div className="flex items-center gap-3">
@@ -207,9 +287,9 @@ function RolesCard({ profileName }: { profileName: string }) {
         one record and a landlord on the next.
       </p>
 
-      {rows.length > 0 ? (
+      {tenancyAddresses.length > 0 ? (
         <ul className="mt-5 space-y-2.5">
-          {rows.map((row) => (
+          {tenancyAddresses.map((row) => (
             <li
               key={row.id}
               className="flex items-center justify-between gap-3 rounded-xl border border-line-soft bg-cream-raised px-3.5 py-3"
@@ -264,11 +344,22 @@ function HistoryCard({
 }
 
 export function ProfileView() {
-  const { profile } = useProfile();
+  const {
+    profile,
+    loading,
+    syncStatus,
+    syncError,
+    reloadProfile,
+    authenticated,
+    status: authStatus,
+  } = useAuthenticatedProfile();
+  const { signOut } = useAuth();
   const wallet = useWalletIdentity();
+  const tenanciesState = useTenancies();
   const [editing, setEditing] = useState(false);
 
   const hasProfile = Boolean(profile);
+  const connected = wallet.connected;
 
   const memberSince = profile
     ? new Date(profile.createdAt).toLocaleDateString("en-IE", {
@@ -277,13 +368,24 @@ export function ProfileView() {
       })
     : "—";
 
-  const tenancyCount = profile
-    ? TENANCIES.filter(
-        (tenancy) =>
-          tenancy.tenant.name === profile.fullName ||
-          tenancy.landlord.name === profile.fullName,
-      ).length
-    : 0;
+  const roleRows =
+    tenanciesState.status === "ready" && profile
+      ? tenanciesState.tenancies
+          .map((tenancy) => ({
+            id: tenancy.id,
+            address: `${tenancy.address}, ${tenancy.locality}`,
+            isTenant: tenancy.tenant.name === profile.fullName,
+            isLandlord: tenancy.landlord.name === profile.fullName,
+          }))
+          .filter((row) => row.isTenant || row.isLandlord)
+          .map((row) => ({
+            id: row.id,
+            address: row.address,
+            role: row.isTenant ? "Tenant" : "Landlord",
+          }))
+      : [];
+
+  const tenancyCount = roleRows.length;
 
   return (
     <Container className="space-y-8 py-10 sm:py-12">
@@ -294,7 +396,42 @@ export function ProfileView() {
 
       <div className="grid gap-5 lg:grid-cols-[1.15fr_0.85fr]">
         <div className="space-y-5">
-          {!hasProfile && wallet.connected ? (
+          {loading ? <ProfileSkeleton /> : null}
+
+          {!loading && syncStatus === "error" ? (
+            <Card padding="lg">
+              <div className="flex items-center gap-3">
+                <span
+                  aria-hidden
+                  className="grid size-9 place-items-center rounded-lg bg-dispute-soft text-dispute"
+                >
+                  <TriangleAlert className="size-[18px]" strokeWidth={1.75} />
+                </span>
+                <div>
+                  <h2 className="text-base font-semibold text-ink">
+                    We couldn&apos;t load your profile
+                  </h2>
+                  <p className="text-sm text-muted">{syncError}</p>
+                </div>
+              </div>
+              <div className="mt-5">
+                <Button variant="outline" onClick={reloadProfile}>
+                  <RefreshCw aria-hidden className="size-4" strokeWidth={1.9} />
+                  Try again
+                </Button>
+              </div>
+            </Card>
+          ) : null}
+
+          {!loading && syncStatus !== "error" && authStatus === "unauthenticated" && connected ? (
+            <VerifyCard />
+          ) : null}
+
+          {!loading &&
+          syncStatus !== "error" &&
+          authenticated &&
+          !hasProfile &&
+          connected ? (
             <Card padding="lg">
               <div className="flex items-center gap-3 border-b border-line-soft pb-5">
                 <span
@@ -308,7 +445,7 @@ export function ProfileView() {
                     Create your profile
                   </h2>
                   <p className="text-sm text-muted">
-                    Linked to {wallet.shortAddress} on {wallet.walletName}
+                    Your verified wallet becomes the owner of this profile.
                   </p>
                 </div>
               </div>
@@ -318,14 +455,14 @@ export function ProfileView() {
             </Card>
           ) : null}
 
-          {!hasProfile && !wallet.connected ? (
+          {!loading && syncStatus !== "error" && !hasProfile && !connected ? (
             <ConnectToContinue
               title="Connect your wallet to continue"
               description="Your DepositLock profile is created once and reused across every tenancy you join. Connect a wallet to start it."
             />
           ) : null}
 
-          {hasProfile && !editing ? (
+          {!loading && hasProfile && !editing ? (
             <Card padding="lg">
               <div className="flex items-start justify-between gap-4 border-b border-line-soft pb-6">
                 <div className="flex min-w-0 items-center gap-4">
@@ -344,18 +481,33 @@ export function ProfileView() {
                     </p>
                     <div className="mt-2 flex flex-wrap items-center gap-2">
                       <Badge tone="neutral">Member since {memberSince}</Badge>
-                      <Badge tone="protected">Local profile</Badge>
+                      <Badge tone={syncStatus === "ready" ? "protected" : "neutral"}>
+                        {syncStatus === "ready" ? "Verified wallet" : "Profile"}
+                      </Badge>
                     </div>
                   </div>
                 </div>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setEditing(true)}
-                >
-                  <Pencil aria-hidden className="size-4" strokeWidth={1.9} />
-                  <span className="hidden sm:inline">Edit profile</span>
-                </Button>
+                <div className="flex shrink-0 items-center gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setEditing(true)}
+                  >
+                    <Pencil aria-hidden className="size-4" strokeWidth={1.9} />
+                    <span className="hidden sm:inline">Edit profile</span>
+                  </Button>
+                  {authenticated ? (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => void signOut()}
+                      title="Sign out of DepositLock — your wallet stays connected"
+                    >
+                      <LogOut aria-hidden className="size-4" strokeWidth={1.9} />
+                      <span className="hidden sm:inline">Sign out</span>
+                    </Button>
+                  ) : null}
+                </div>
               </div>
 
               <div className="mt-6 grid gap-4 sm:grid-cols-2">
@@ -371,7 +523,7 @@ export function ProfileView() {
             </Card>
           ) : null}
 
-          {hasProfile && editing ? (
+          {!loading && hasProfile && editing ? (
             <Card padding="lg">
               <div className="border-b border-line-soft pb-5">
                 <h2 className="text-lg font-semibold text-ink">Edit profile</h2>
@@ -389,7 +541,7 @@ export function ProfileView() {
         <div className="space-y-5">
           <WalletCard />
           {profile ? (
-            <RolesCard profileName={profile.fullName} />
+            <RolesCard tenancyAddresses={roleRows} />
           ) : null}
           <HistoryCard memberSince={memberSince} tenancyCount={tenancyCount} />
         </div>

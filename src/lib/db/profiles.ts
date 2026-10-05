@@ -62,9 +62,14 @@ export async function getProfileByWallet(
 }
 
 export type CreateProfileInput = {
+  /**
+   * Profile id. Phase 3B: this is the Supabase Auth user id (`auth.uid()`) —
+   * RLS only lets a caller insert their own row, and `bind_profile_wallet`
+   * rejects any other value.
+   */
+  id: string;
   fullName: string;
   email: string;
-  walletAddress: string | null;
   avatarUrl?: string | null;
 };
 
@@ -76,9 +81,9 @@ export async function createProfile(
     client
       .from("profiles")
       .insert({
+        id: input.id,
         full_name: input.fullName.trim(),
         email: input.email.trim().toLowerCase(),
-        wallet_address: input.walletAddress,
         avatar_url: input.avatarUrl ?? null,
       })
       .select("*"),

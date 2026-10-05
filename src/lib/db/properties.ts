@@ -17,6 +17,7 @@ export function toPropertyRecord(row: Property): PropertyRecord {
     postalCode: row.postal_code,
     country: row.country,
     propertyType: row.property_type,
+    bedrooms: row.bedrooms,
     coverImageUrl: row.cover_image_url,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
@@ -54,6 +55,7 @@ export type CreatePropertyInput = {
   postalCode?: string | null;
   country?: string;
   propertyType: string;
+  bedrooms?: number | null;
   coverImageUrl?: string | null;
 };
 
@@ -73,6 +75,7 @@ export async function createProperty(
         postal_code: input.postalCode ?? null,
         country: input.country ?? "IE",
         property_type: input.propertyType,
+        bedrooms: input.bedrooms ?? null,
         cover_image_url: input.coverImageUrl ?? null,
       })
       .select("*"),
