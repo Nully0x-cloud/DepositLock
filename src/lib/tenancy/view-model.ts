@@ -82,6 +82,7 @@ export function activityKind(eventType: string): ActivityKind {
       return "evidence";
     case "tenant_invited":
     case "tenant_accepted":
+    case "tenant_declined":
       return "agreement";
     case "deduction_proposed":
     case "deduction_accepted":
@@ -226,10 +227,20 @@ export function toTenancy(input: TenancyMappingInput): Tenancy {
     rentMonthly: tenancy.monthlyRentAmount,
     depositAmount: tenancy.depositAmount,
     status: view.status,
+    recordStatus: tenancy.status,
     filterGroup: view.filterGroup,
     lifecycleStage: view.lifecycleStage,
     fundedAt: fundedEvent?.createdAt ?? null,
-    tenant: toParty("tenant", tenantParticipant, tenancy, directory, viewer),
+    tenant: tenantParticipant
+      ? toParty("tenant", tenantParticipant, tenancy, directory, viewer)
+      : {
+          // Phase 4: the tenant is unknown until the invitation is accepted.
+          id: "tenant-pending",
+          name: "Waiting for tenant",
+          role: "tenant",
+          email: "",
+          joinedAt: tenancy.createdAt,
+        },
     landlord: toParty("landlord", landlordParticipant, tenancy, directory, viewer),
     evidence,
     activity,

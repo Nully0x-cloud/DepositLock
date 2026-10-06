@@ -10,9 +10,11 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { DepositStatusBlock } from "@/components/tenancy/deposit-status-block";
 import { EvidencePreview } from "@/components/tenancy/evidence-preview";
 import { IdentityRow } from "@/components/tenancy/identity-row";
+import { InvitationPanel } from "@/components/tenancy/invitation-panel";
 import { LifecycleTrack } from "@/components/tenancy/lifecycle-track";
 import { PropertyImage } from "@/components/tenancy/property-image";
 import { SignInPrompt } from "@/components/wallet/sign-in-prompt";
+import { useRequireAuth } from "@/hooks/use-require-auth";
 import { useTenancyRecord } from "@/hooks/use-tenancy-record";
 import {
   cn,
@@ -115,6 +117,7 @@ function RecordSkeleton() {
  */
 export function TenancyRecord({ id }: { id: string }) {
   const result = useTenancyRecord(id);
+  const { userId } = useRequireAuth();
 
   const tenancy = result.status === "ready" ? result.tenancy : null;
 
@@ -248,6 +251,13 @@ export function TenancyRecord({ id }: { id: string }) {
           ))}
         </dl>
       </section>
+
+      {userId &&
+      tenancy.landlord.id === userId &&
+      (tenancy.recordStatus === "awaiting_tenant" ||
+        tenancy.recordStatus === "draft") ? (
+        <InvitationPanel tenancyId={tenancy.id} />
+      ) : null}
 
       <Card padding="lg">
         <div className="flex flex-wrap items-center justify-between gap-3">

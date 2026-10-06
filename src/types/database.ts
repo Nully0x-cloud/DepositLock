@@ -37,6 +37,8 @@ export type TenancyUpdate = Public["Tables"]["tenancies"]["Update"];
 
 export type TenancyParticipant = Public["Tables"]["tenancy_participants"]["Row"];
 
+export type TenancyInvitation = Public["Tables"]["tenancy_invitations"]["Row"];
+
 export type Evidence = Public["Tables"]["evidence"]["Row"];
 export type EvidenceInsert = Public["Tables"]["evidence"]["Insert"];
 

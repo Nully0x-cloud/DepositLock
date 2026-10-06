@@ -19,6 +19,7 @@ export {
 export type { DbClient } from "./client-type";
 
 export {
+  displayMessage,
   isRepositoryError,
   mapRepositoryError,
   repositoryError,
@@ -34,6 +35,7 @@ export * from "./models";
 export * from "./profiles";
 export * from "./properties";
 export * from "./tenancies";
+export * from "./invitations";
 export * from "./evidence";
 export * from "./deductions";
 export * from "./disputes";

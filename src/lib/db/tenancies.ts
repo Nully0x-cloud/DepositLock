@@ -1,5 +1,11 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
-import type { Database, Property, Tenancy, TenancyParticipant } from "@/types/database";
+import type {
+  Database,
+  Json,
+  Property,
+  Tenancy,
+  TenancyParticipant,
+} from "@/types/database";
 import type { RepositoryResult } from "./errors";
 import { fromResult } from "./from-result";
 import { toPropertyRecord } from "./properties";
@@ -133,48 +139,99 @@ export async function listVisibleParticipants(
   return { ok: true, data: result.data.map(toParticipantRecord) };
 }
 
-export type CreateTenancyInput = {
-  propertyId: string;
-  landlordProfileId: string;
-  tenantProfileId: string;
+export type CreateTenancyWithInvitationInput = {
   startDate: string;
   endDate?: string | null;
-  monthlyRentAmount: number;
-  depositAmount: number;
-  displayCurrency?: string;
-  settlementToken?: string | null;
-  status?: string;
+  monthlyRent: number;
+  deposit: number;
+  tenantEmail: string;
+  tenantWallet?: string | null;
+  /** Use an existing property the caller created… */
+  propertyId?: string | null;
+  /** …or describe a new one, created in the same transaction. */
+  property?: {
+    addressLine1: string;
+    addressLine2?: string | null;
+    city: string;
+    county?: string | null;
+    postalCode?: string | null;
+    country?: string;
+    propertyType: string;
+    bedrooms?: number | null;
+  };
+  currency?: string;
 };
 
+export type CreatedTenancy = {
+  tenancyId: string;
+  propertyId: string;
+  /** Raw bearer token of the invitation link, shown once to the landlord. */
+  invitationToken: string;
+};
+
+function asRecord(data: Json): Record<string, Json> | null {
+  if (typeof data !== "object" || data === null || Array.isArray(data)) {
+    return null;
+  }
+  return data as Record<string, Json>;
+}
+
 /**
- * Creates the tenancy. The `sync_tenancy_participants` trigger derives the
- * participant rows, so callers only ever state the contract once.
+ * Creates the tenancy and its first invitation in one transaction (Phase 4).
+ *
+ * The tenancy enters the world as `awaiting_tenant` with no tenant — only
+ * `accept_tenancy_invitation` ever assigns one. Returns the ids plus the raw
+ * invitation token so the review screen can hand the link to the landlord.
  */
-export async function createTenancy(
+export async function createTenancyWithInvitation(
   client: Client,
-  input: CreateTenancyInput,
-): Promise<RepositoryResult<TenancyRecord>> {
-  const result = await fromResult<Tenancy[]>(
-    client
-      .from("tenancies")
-      .insert({
-        property_id: input.propertyId,
-        landlord_profile_id: input.landlordProfileId,
-        tenant_profile_id: input.tenantProfileId,
-        start_date: input.startDate,
-        end_date: input.endDate ?? null,
-        monthly_rent_amount: input.monthlyRentAmount,
-        deposit_amount: input.depositAmount,
-        display_currency: input.displayCurrency ?? "EUR",
-        settlement_token: input.settlementToken ?? null,
-        status: input.status ?? "draft",
-      })
-      .select("*"),
+  input: CreateTenancyWithInvitationInput,
+): Promise<RepositoryResult<CreatedTenancy>> {
+  const property = input.property;
+
+  const result = await fromResult<Json>(
+    client.rpc("create_tenancy_with_invitation", {
+      p_start_date: input.startDate,
+      ...(input.endDate ? { p_end_date: input.endDate } : {}),
+      p_monthly_rent: input.monthlyRent,
+      p_deposit: input.deposit,
+      p_tenant_email: input.tenantEmail,
+      ...(input.tenantWallet ? { p_tenant_wallet: input.tenantWallet } : {}),
+      ...(input.propertyId ? { p_property_id: input.propertyId } : {}),
+      ...(property
+        ? {
+            p_property: {
+              address_line_1: property.addressLine1,
+              address_line_2: property.addressLine2 ?? null,
+              city: property.city,
+              county: property.county ?? null,
+              postal_code: property.postalCode ?? null,
+              country: property.country ?? "IE",
+              property_type: property.propertyType,
+              bedrooms: property.bedrooms ?? null,
+            },
+          }
+        : {}),
+      p_currency: input.currency ?? "EUR",
+    }),
   );
   if (!result.ok) return result;
-  const row = result.data[0];
-  if (!row) return { ok: false, error: { code: "unknown", message: "The tenancy was not created." } };
-  return { ok: true, data: toTenancyRecord(row) };
+
+  const raw = asRecord(result.data);
+  const tenancyId = raw && typeof raw.tenancy_id === "string" ? raw.tenancy_id : "";
+  const propertyId =
+    raw && typeof raw.property_id === "string" ? raw.property_id : "";
+  const invitationToken =
+    raw && typeof raw.invitation_token === "string" ? raw.invitation_token : "";
+
+  if (!tenancyId || !propertyId || !invitationToken) {
+    return {
+      ok: false,
+      error: { code: "unknown", message: "The tenancy was not created." },
+    };
+  }
+
+  return { ok: true, data: { tenancyId, propertyId, invitationToken } };
 }
 
 /**

@@ -320,6 +320,26 @@ describe("toTenancy", () => {
     expect(mapped.fundedAt).toBeNull();
   });
 
+  it("exposes the raw database status and a waiting tenant before acceptance", () => {
+    const mapped = toTenancy({
+      tenancy: tenancy({ status: "awaiting_tenant", tenantProfileId: null }),
+      property: property(),
+      participants: [],
+      directory: new Map(),
+      viewer: null,
+    });
+
+    expect(mapped.recordStatus).toBe("awaiting_tenant");
+    expect(mapped.status).toBe("pending");
+    expect(mapped.filterGroup).toBe("pending");
+    expect(mapped.tenant).toMatchObject({
+      id: "tenant-pending",
+      name: "Waiting for tenant",
+      role: "tenant",
+      email: "",
+    });
+  });
+
   it("falls back to the county when the eircode does not encode a Dublin area", () => {
     const mapped = toTenancy({
       ...base(),

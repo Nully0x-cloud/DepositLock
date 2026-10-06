@@ -50,6 +50,7 @@ const isPostgrestError = (value: unknown): value is PostgrestErrorLike =>
  *
  * Recognised signals:
  * - `PGRST116` / "no rows"      → not_found
+ * - SQLSTATE `P0002`            → not_found (our RPCs raise "not valid")
  * - SQLSTATE `42501` / `PGRST301` → permission_denied (RLS rejected the read)
  * - SQLSTATE `23xxx`            → validation, except `23505` → conflict
  * - everything else             → unknown
@@ -63,6 +64,10 @@ export function mapRepositoryError(error: unknown): RepositoryError {
   const message = error.message ?? "";
 
   if (code === "PGRST116" || /^0 rows/i.test(message)) {
+    return { code: "not_found", message: MESSAGES.not_found, detail: message };
+  }
+
+  if (code === "P0002") {
     return { code: "not_found", message: MESSAGES.not_found, detail: message };
   }
 
@@ -94,6 +99,24 @@ export function repositoryError(
   detail?: string,
 ): RepositoryError {
   return { code, message: MESSAGES[code], detail };
+}
+
+/**
+ * Engine output that must never reach a user. Everything else in `detail`
+ * was raised by our own SECURITY DEFINER RPCs (authored, human-readable
+ * copy such as "This invitation has expired…") and is safe to render.
+ */
+const ENGINE_DETAIL =
+  /constraint|relation |column |row-level security|syntax error|foreign key|duplicate key|violates|JSON object requested|multiple \(or no\) rows/i;
+
+/**
+ * The copy to render for a failed repository call: our authored RPC message
+ * when it is safe, otherwise the stable generic message for the code.
+ */
+export function displayMessage(error: RepositoryError): string {
+  const detail = error.detail;
+  if (!detail || ENGINE_DETAIL.test(detail)) return error.message;
+  return detail;
 }
 
 export function isRepositoryError(value: unknown): value is RepositoryError {

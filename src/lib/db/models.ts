@@ -37,7 +37,8 @@ export type TenancyRecord = {
   id: string;
   propertyId: string;
   landlordProfileId: string;
-  tenantProfileId: string;
+  /** Null until the tenant accepts their invitation (Phase 4). */
+  tenantProfileId: string | null;
   startDate: string;
   endDate: string | null;
   monthlyRentAmount: number;
@@ -65,6 +66,28 @@ export type TenancyParticipantRecord = {
   joinedAt: string;
   acceptedAt: string | null;
   status: "invited" | "accepted" | "declined";
+};
+
+export type InvitationStatus =
+  | "pending"
+  | "accepted"
+  | "declined"
+  | "expired"
+  | "cancelled";
+
+export type InvitationRecord = {
+  id: string;
+  tenancyId: string;
+  invitedByProfileId: string;
+  email: string | null;
+  walletAddress: string | null;
+  /** Raw bearer token of the /invite/<token> link (landlord-readable only). */
+  token: string;
+  status: InvitationStatus;
+  createdAt: string;
+  expiresAt: string;
+  acceptedAt: string | null;
+  acceptedByProfileId: string | null;
 };
 
 export type EvidenceRecord = {

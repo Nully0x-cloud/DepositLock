@@ -66,6 +66,8 @@ export interface Tenancy {
   rentMonthly: number;
   depositAmount: number;
   status: TenancyStatus;
+  /** Raw database status (`awaiting_tenant`, `awaiting_deposit`, …). */
+  recordStatus: string;
   filterGroup: Exclude<TenancyFilter, "all">;
   lifecycleStage: LifecycleStage;
   fundedAt: string | null;

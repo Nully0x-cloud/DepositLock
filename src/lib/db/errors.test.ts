@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  displayMessage,
   isRepositoryError,
   mapRepositoryError,
   repositoryError,
@@ -58,6 +59,14 @@ describe("mapRepositoryError", () => {
     expect(mapRepositoryError(new Error("boom")).code).toBe("unknown");
   });
 
+  it("maps our own RPC 'not found' raise to not_found", () => {
+    const mapped = mapRepositoryError(
+      postgrest("P0002", "This invitation link is not valid"),
+    );
+    expect(mapped.code).toBe("not_found");
+    expect(mapped.detail).toBe("This invitation link is not valid");
+  });
+
   it("keeps safe copy on every result and the raw detail out of it", () => {
     const mapped = mapRepositoryError(postgrest("23514", "check failed"));
     expect(mapped.message).toBe(
@@ -96,5 +105,38 @@ describe("isRepositoryError", () => {
     expect(isRepositoryError({})).toBe(false);
     expect(isRepositoryError({ code: 42, message: "x" })).toBe(false);
     expect(isRepositoryError(new Error("boom"))).toBe(false);
+  });
+});
+
+describe("displayMessage", () => {
+  it("shows an authored RPC message instead of the generic copy", () => {
+    const error = mapRepositoryError(
+      postgrest("23514", "This invitation has expired. Ask the landlord to send a new one."),
+    );
+    expect(displayMessage(error)).toBe(
+      "This invitation has expired. Ask the landlord to send a new one.",
+    );
+  });
+
+  it("hides engine output behind the stable copy", () => {
+    const constraint = mapRepositoryError(
+      postgrest("23514", 'new row violates check constraint "tenancies_deposit_positive"'),
+    );
+    expect(displayMessage(constraint)).toBe(
+      "Those details are not valid for this record.",
+    );
+
+    const rls = mapRepositoryError(
+      postgrest("42501", "new row violates row-level security policy for table \"tenancies\""),
+    );
+    expect(displayMessage(rls)).toBe(
+      "You do not have access to that record.",
+    );
+  });
+
+  it("falls back to the generic copy when there is no detail", () => {
+    expect(displayMessage(repositoryError("unknown"))).toBe(
+      "Something went wrong. Please try again.",
+    );
   });
 });

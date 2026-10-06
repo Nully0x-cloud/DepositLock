@@ -261,13 +261,13 @@ isOneToOne: true
                   ]
                 },"tenancies": {
                   Row: {
-                    "activated_at": string | null,"blockchain_reference": string | null,"closed_at": string | null,"created_at": string,"deposit_amount": number,"display_currency": string,"end_date": string | null,"id": string,"landlord_profile_id": string,"monthly_rent_amount": number,"property_id": string,"settlement_token": string | null,"start_date": string,"status": string,"tenant_profile_id": string,"updated_at": string,"vault_address": string | null
+                    "activated_at": string | null,"blockchain_reference": string | null,"closed_at": string | null,"created_at": string,"deposit_amount": number,"display_currency": string,"end_date": string | null,"id": string,"landlord_profile_id": string,"monthly_rent_amount": number,"property_id": string,"settlement_token": string | null,"start_date": string,"status": string,"tenant_profile_id": string | null,"updated_at": string,"vault_address": string | null
                   }
                   Insert: {
-                    "activated_at"?: string | null,"blockchain_reference"?: string | null,"closed_at"?: string | null,"created_at"?: string,"deposit_amount": number,"display_currency"?: string,"end_date"?: string | null,"id"?: string,"landlord_profile_id": string,"monthly_rent_amount": number,"property_id": string,"settlement_token"?: string | null,"start_date": string,"status"?: string,"tenant_profile_id": string,"updated_at"?: string,"vault_address"?: string | null
+                    "activated_at"?: string | null,"blockchain_reference"?: string | null,"closed_at"?: string | null,"created_at"?: string,"deposit_amount": number,"display_currency"?: string,"end_date"?: string | null,"id"?: string,"landlord_profile_id": string,"monthly_rent_amount": number,"property_id": string,"settlement_token"?: string | null,"start_date": string,"status"?: string,"tenant_profile_id"?: string | null,"updated_at"?: string,"vault_address"?: string | null
                   }
                   Update: {
-                    "activated_at"?: string | null,"blockchain_reference"?: string | null,"closed_at"?: string | null,"created_at"?: string,"deposit_amount"?: number,"display_currency"?: string,"end_date"?: string | null,"id"?: string,"landlord_profile_id"?: string,"monthly_rent_amount"?: number,"property_id"?: string,"settlement_token"?: string | null,"start_date"?: string,"status"?: string,"tenant_profile_id"?: string,"updated_at"?: string,"vault_address"?: string | null
+                    "activated_at"?: string | null,"blockchain_reference"?: string | null,"closed_at"?: string | null,"created_at"?: string,"deposit_amount"?: number,"display_currency"?: string,"end_date"?: string | null,"id"?: string,"landlord_profile_id"?: string,"monthly_rent_amount"?: number,"property_id"?: string,"settlement_token"?: string | null,"start_date"?: string,"status"?: string,"tenant_profile_id"?: string | null,"updated_at"?: string,"vault_address"?: string | null
                   }
                   Relationships: [
                     {
@@ -299,6 +299,49 @@ isOneToOne: false
       columns: ["tenant_profile_id"]
 isOneToOne: false
       referencedRelation: "v_shared_profiles"
+      referencedColumns: ["id"]
+    }
+                  ]
+                },"tenancy_invitations": {
+                  Row: {
+                    "accepted_at": string | null,"accepted_by_profile_id": string | null,"created_at": string,"email": string | null,"expires_at": string,"id": string,"invited_by_profile_id": string,"status": string,"tenancy_id": string,"token": string,"wallet_address": string | null
+                  }
+                  Insert: {
+                    "accepted_at"?: string | null,"accepted_by_profile_id"?: string | null,"created_at"?: string,"email"?: string | null,"expires_at"?: string,"id"?: string,"invited_by_profile_id": string,"status"?: string,"tenancy_id": string,"token": string,"wallet_address"?: string | null
+                  }
+                  Update: {
+                    "accepted_at"?: string | null,"accepted_by_profile_id"?: string | null,"created_at"?: string,"email"?: string | null,"expires_at"?: string,"id"?: string,"invited_by_profile_id"?: string,"status"?: string,"tenancy_id"?: string,"token"?: string,"wallet_address"?: string | null
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "tenancy_invitations_accepted_by_profile_id_fkey"
+      columns: ["accepted_by_profile_id"]
+isOneToOne: false
+      referencedRelation: "profiles"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "tenancy_invitations_accepted_by_profile_id_fkey"
+      columns: ["accepted_by_profile_id"]
+isOneToOne: false
+      referencedRelation: "v_shared_profiles"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "tenancy_invitations_invited_by_profile_id_fkey"
+      columns: ["invited_by_profile_id"]
+isOneToOne: false
+      referencedRelation: "profiles"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "tenancy_invitations_invited_by_profile_id_fkey"
+      columns: ["invited_by_profile_id"]
+isOneToOne: false
+      referencedRelation: "v_shared_profiles"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "tenancy_invitations_tenancy_id_fkey"
+      columns: ["tenancy_id"]
+isOneToOne: false
+      referencedRelation: "tenancies"
       referencedColumns: ["id"]
     }
                   ]
@@ -352,8 +395,23 @@ isOneToOne: false
                 }
           }
           Functions: {
-            "can_read_property":
+            "accept_tenancy_invitation":
+{ Args: { "p_token": string }; Returns: Json
+                           },
+"can_read_property":
 { Args: { "p_profile_id": string,"p_property_id": string }; Returns: boolean
+                           },
+"cancel_tenancy_invitation":
+{ Args: { "p_invitation_id": string }; Returns: Json
+                           },
+"create_tenancy_invitation":
+{ Args: { "p_tenancy_id": string,"p_tenant_email"?: string,"p_tenant_wallet"?: string }; Returns: Json
+                           },
+"create_tenancy_with_invitation":
+{ Args: { "p_currency"?: string,"p_deposit": number,"p_end_date"?: string,"p_monthly_rent": number,"p_property"?: Json,"p_property_id"?: string,"p_start_date": string,"p_tenant_email"?: string,"p_tenant_wallet"?: string }; Returns: Json
+                           },
+"decline_tenancy_invitation":
+{ Args: { "p_token": string }; Returns: Json
                            },
 "is_tenancy_landlord":
 { Args: { "p_profile_id": string,"p_tenancy_id": string }; Returns: boolean
@@ -363,6 +421,9 @@ isOneToOne: false
                            },
 "is_tenancy_tenant":
 { Args: { "p_profile_id": string,"p_tenancy_id": string }; Returns: boolean
+                           },
+"resolve_tenancy_invitation":
+{ Args: { "p_token": string }; Returns: Json
                            },
 "verified_wallet_address":
 { Args: { "p_user_id": string }; Returns: string
