@@ -7,6 +7,7 @@ import { Badge, StatusBadge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
+import { DepositFundingPanel } from "@/components/tenancy/deposit-funding-panel";
 import { DepositStatusBlock } from "@/components/tenancy/deposit-status-block";
 import { EvidencePreview } from "@/components/tenancy/evidence-preview";
 import { IdentityRow } from "@/components/tenancy/identity-row";
@@ -209,6 +210,16 @@ export function TenancyRecord({ id }: { id: string }) {
         status={tenancy.status}
         fundedAt={tenancy.fundedAt}
       />
+
+      {tenancy.recordStatus === "awaiting_deposit" && userId ? (
+        <DepositFundingPanel
+          tenancy={tenancy}
+          viewerId={userId}
+          onReconciled={
+            result.status === "ready" ? result.refresh : () => undefined
+          }
+        />
+      ) : null}
 
       <section aria-label="Tenancy parties" className="overflow-hidden rounded-3xl border border-line bg-parchment">
         <div className="grid divide-y divide-line sm:grid-cols-2 sm:divide-x sm:divide-y-0">

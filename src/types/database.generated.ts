@@ -85,6 +85,25 @@ isOneToOne: false
       referencedColumns: ["id"]
     }
                   ]
+                },"deposit_records": {
+                  Row: {
+                    "agreement_address": string,"created_at": string,"deposited_amount": number | null,"funded_at": string | null,"funding_signature": string | null,"id": string,"initialization_signature": string | null,"mint_address": string,"onchain_status": string,"required_amount": number,"tenancy_id": string,"updated_at": string,"vault_address": string,"verified_at": string
+                  }
+                  Insert: {
+                    "agreement_address": string,"created_at"?: string,"deposited_amount"?: number | null,"funded_at"?: string | null,"funding_signature"?: string | null,"id"?: string,"initialization_signature"?: string | null,"mint_address": string,"onchain_status"?: string,"required_amount": number,"tenancy_id": string,"updated_at"?: string,"vault_address": string,"verified_at"?: string
+                  }
+                  Update: {
+                    "agreement_address"?: string,"created_at"?: string,"deposited_amount"?: number | null,"funded_at"?: string | null,"funding_signature"?: string | null,"id"?: string,"initialization_signature"?: string | null,"mint_address"?: string,"onchain_status"?: string,"required_amount"?: number,"tenancy_id"?: string,"updated_at"?: string,"vault_address"?: string,"verified_at"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "deposit_records_tenancy_id_fkey"
+      columns: ["tenancy_id"]
+isOneToOne: true
+      referencedRelation: "tenancies"
+      referencedColumns: ["id"]
+    }
+                  ]
                 },"disputes": {
                   Row: {
                     "created_at": string,"deduction_id": string,"id": string,"opened_at": string,"opened_by_profile_id": string,"reason": string,"resolution_notes": string | null,"resolved_at": string | null,"resolved_by_profile_id": string | null,"status": string,"tenancy_id": string,"updated_at": string
@@ -421,6 +440,12 @@ isOneToOne: false
                            },
 "is_tenancy_tenant":
 { Args: { "p_profile_id": string,"p_tenancy_id": string }; Returns: boolean
+                           },
+"mark_deposit_protected":
+{ Args: { "p_agreement_address": string,"p_decimals": number,"p_deposited_amount": number,"p_funding_signature": string,"p_mint_address": string,"p_onchain_funded_at": string,"p_required_amount": number,"p_tenancy_id": string,"p_vault_address": string }; Returns: Json
+                           },
+"record_deposit_agreement":
+{ Args: { "p_agreement_address": string,"p_decimals": number,"p_initialization_signature": string,"p_mint_address": string,"p_required_amount": number,"p_tenancy_id": string,"p_vault_address": string }; Returns: Json
                            },
 "resolve_tenancy_invitation":
 { Args: { "p_token": string }; Returns: Json

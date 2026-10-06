@@ -27,7 +27,8 @@ export type TenancyRecordResult =
    */
   | { status: "unavailable" }
   | { status: "error"; message: string; retry(): void }
-  | { status: "ready"; tenancy: Tenancy };
+  /** `refresh()` re-reads the record — used after a deposit action lands. */
+  | { status: "ready"; tenancy: Tenancy; refresh(): void };
 
 type RecordState = {
   key: string | null;
@@ -126,7 +127,7 @@ export function useTenancyRecord(id: string): TenancyRecordResult {
   if (!configured) {
     const mock = getMockTenancyById(id);
     return mock
-      ? { status: "ready", tenancy: mock }
+      ? { status: "ready", tenancy: mock, refresh: retry }
       : { status: "unavailable" };
   }
   if (!ready) return { status: "loading" };
@@ -135,7 +136,7 @@ export function useTenancyRecord(id: string): TenancyRecordResult {
   if (state.key === key) {
     if (state.unavailable) return { status: "unavailable" };
     if (state.error) return { status: "error", message: state.error, retry };
-    if (state.tenancy) return { status: "ready", tenancy: state.tenancy };
+    if (state.tenancy) return { status: "ready", tenancy: state.tenancy, refresh: retry };
   }
 
   return { status: "loading" };

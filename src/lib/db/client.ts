@@ -76,11 +76,16 @@ export function getSupabaseBrowserClient(): SupabaseClient<Database> | null {
  * Server-side client (Server Components, route handlers).
  * Still the anon key — RLS applies exactly as it does in the browser.
  */
-export function createSupabaseServerClient(): SupabaseClient<Database> | null {
+export function createSupabaseServerClient(
+  accessToken?: string,
+): SupabaseClient<Database> | null {
   const config = readSupabaseConfig();
   if (!config) return null;
 
   return createClient<Database>(config.url, config.anonKey, {
     auth: { persistSession: false, autoRefreshToken: false },
+    ...(accessToken
+      ? { global: { headers: { Authorization: `Bearer ${accessToken}` } } }
+      : {}),
   });
 }

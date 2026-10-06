@@ -14,6 +14,7 @@ async function loadClient(): Promise<ClientModule> {
 
 afterEach(() => {
   vi.unstubAllEnvs();
+  vi.unstubAllGlobals();
 });
 
 describe("readSupabaseConfig", () => {
@@ -118,6 +119,30 @@ describe("createSupabaseServerClient", () => {
     const { createSupabaseServerClient } = await loadClient();
     expect(createSupabaseServerClient()).not.toBe(
       createSupabaseServerClient(),
+    );
+  });
+
+  it("forwards the caller session to PostgREST for RLS checks", async () => {
+    vi.stubEnv("NEXT_PUBLIC_SUPABASE_URL", LOCAL_URL);
+    vi.stubEnv("NEXT_PUBLIC_SUPABASE_ANON_KEY", ANON_KEY);
+    const requests: { input: RequestInfo | URL; init?: RequestInit }[] = [];
+    const fetchMock = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+      requests.push({ input, init });
+      return new Response("[]", {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      });
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    const { createSupabaseServerClient } = await loadClient();
+    const client = createSupabaseServerClient("caller-access-token");
+    expect(client).not.toBeNull();
+    await client!.from("tenancies").select("id").limit(1);
+
+    const request = requests[0]?.init;
+    expect(new Headers(request?.headers).get("authorization")).toBe(
+      "Bearer caller-access-token",
     );
   });
 });

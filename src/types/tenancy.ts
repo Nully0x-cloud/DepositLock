@@ -26,6 +26,8 @@ export interface Party {
   role: PartyRole;
   email: string;
   joinedAt: string;
+  /** Verified Solana wallet from SIWS; `null` when not linked yet. */
+  wallet: string | null;
 }
 
 export interface EvidenceItem {
@@ -71,6 +73,8 @@ export interface Tenancy {
   filterGroup: Exclude<TenancyFilter, "all">;
   lifecycleStage: LifecycleStage;
   fundedAt: string | null;
+  /** The agreement's deterministic token vault, once created on chain. */
+  vaultAddress: string | null;
   tenant: Party;
   landlord: Party;
   evidence: EvidenceItem[];

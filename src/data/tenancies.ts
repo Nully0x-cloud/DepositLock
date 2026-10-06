@@ -68,6 +68,7 @@ const sarahByrne: Party = {
   role: "tenant",
   email: "sarah.byrne@example.ie",
   joinedAt: "2026-08-18",
+  wallet: null,
 };
 
 const michaelOconnor: Party = {
@@ -76,6 +77,7 @@ const michaelOconnor: Party = {
   role: "landlord",
   email: "m.oconnor@example.ie",
   joinedAt: "2026-08-17",
+  wallet: null,
 };
 
 const aoifeKelly: Party = {
@@ -84,6 +86,7 @@ const aoifeKelly: Party = {
   role: "tenant",
   email: "aoife.kelly@example.ie",
   joinedAt: "2026-03-02",
+  wallet: null,
 };
 
 const declanMoore: Party = {
@@ -92,6 +95,7 @@ const declanMoore: Party = {
   role: "landlord",
   email: "declan.moore@example.ie",
   joinedAt: "2026-03-01",
+  wallet: null,
 };
 
 const liamDoherty: Party = {
@@ -100,6 +104,7 @@ const liamDoherty: Party = {
   role: "tenant",
   email: "liam.doherty@example.ie",
   joinedAt: "2026-09-24",
+  wallet: null,
 };
 
 const niamhFitzgerald: Party = {
@@ -108,6 +113,7 @@ const niamhFitzgerald: Party = {
   role: "landlord",
   email: "niamh.f@example.ie",
   joinedAt: "2026-09-22",
+  wallet: null,
 };
 
 const camdenActivity: ActivityEvent[] = [
@@ -226,6 +232,7 @@ export const TENANCIES: Tenancy[] = [
     filterGroup: "active",
     lifecycleStage: "active",
     fundedAt: "2026-08-26",
+    vaultAddress: null,
     tenant: sarahByrne,
     landlord: michaelOconnor,
     evidence: [
@@ -274,6 +281,7 @@ export const TENANCIES: Tenancy[] = [
     filterGroup: "active",
     lifecycleStage: "active",
     fundedAt: "2026-03-10",
+    vaultAddress: null,
     tenant: aoifeKelly,
     landlord: declanMoore,
     evidence: [
@@ -314,6 +322,7 @@ export const TENANCIES: Tenancy[] = [
     filterGroup: "pending",
     lifecycleStage: "agreement",
     fundedAt: null,
+    vaultAddress: null,
     tenant: liamDoherty,
     landlord: niamhFitzgerald,
     evidence: [],

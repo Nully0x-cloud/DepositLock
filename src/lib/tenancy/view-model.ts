@@ -77,6 +77,7 @@ export function activityKind(eventType: string): ActivityKind {
   switch (eventType) {
     case "deposit_funded":
     case "deposit_protected":
+    case "deposit_vault_initialized":
       return "deposit";
     case "evidence_added":
       return "evidence";
@@ -163,6 +164,7 @@ function toParty(
     role,
     email,
     joinedAt: participant?.joinedAt ?? tenancy.createdAt,
+    wallet: shared?.walletAddress ?? null,
   };
 }
 
@@ -231,6 +233,7 @@ export function toTenancy(input: TenancyMappingInput): Tenancy {
     filterGroup: view.filterGroup,
     lifecycleStage: view.lifecycleStage,
     fundedAt: fundedEvent?.createdAt ?? null,
+    vaultAddress: tenancy.vaultAddress,
     tenant: tenantParticipant
       ? toParty("tenant", tenantParticipant, tenancy, directory, viewer)
       : {
@@ -240,6 +243,7 @@ export function toTenancy(input: TenancyMappingInput): Tenancy {
           role: "tenant",
           email: "",
           joinedAt: tenancy.createdAt,
+          wallet: null,
         },
     landlord: toParty("landlord", landlordParticipant, tenancy, directory, viewer),
     evidence,

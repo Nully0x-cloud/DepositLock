@@ -1,0 +1,27 @@
+{
+  "address": "FX2jWasLMqeG3X4ntc8jogMgxRdbMMSxKcfTWJxexQbY",
+  "instructions": [
+    {
+      "name": "fund_deposit",
+      "discriminator": [149, 24, 209, 94, 206, 202, 144, 233]
+    },
+    {
+      "name": "initialize_config",
+      "discriminator": [208, 127, 21, 1, 194, 190, 196, 70]
+    },
+    {
+      "name": "initialize_deposit",
+      "discriminator": [171, 65, 93, 225, 61, 109, 31, 227]
+    }
+  ],
+  "accounts": [
+    {
+      "name": "DepositAgreement",
+      "discriminator": [215, 134, 114, 207, 161, 37, 231, 136]
+    },
+    {
+      "name": "DepositLockConfig",
+      "discriminator": [100, 201, 249, 97, 88, 98, 177, 123]
+    }
+  ]
+}
