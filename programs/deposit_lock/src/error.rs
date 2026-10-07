@@ -24,4 +24,20 @@ pub enum DepositLockError {
     InvalidSourceAccount,
     #[msg("The tenant does not hold enough tokens to fund the deposit")]
     InsufficientFunds,
+    #[msg("Only the landlord recorded on this agreement may propose settlement")]
+    UnauthorizedLandlord,
+    #[msg("This settlement instruction is not valid for the agreement state")]
+    InvalidSettlementState,
+    #[msg("No active settlement proposal exists")]
+    NoActiveSettlement,
+    #[msg("The settlement split does not equal the protected deposit")]
+    InvalidSettlementAmounts,
+    #[msg("The proposal version overflowed")]
+    ProposalVersionOverflow,
+    #[msg("The proposal PDA does not belong to this agreement")]
+    InvalidSettlementProposal,
+    #[msg("The vault token balance does not equal the protected deposit")]
+    VaultBalanceMismatch,
+    #[msg("The settlement recipient token account is invalid")]
+    InvalidRecipient,
 }

@@ -11,6 +11,7 @@ export function toSettlementRecord(row: Settlement): SettlementRecord {
     id: row.id,
     tenancyId: row.tenancy_id,
     originalDepositAmount: row.original_deposit_amount,
+    surplusAmount: row.surplus_amount,
     tenantAmount: row.tenant_amount,
     landlordAmount: row.landlord_amount,
     settlementType: row.settlement_type as SettlementRecord["settlementType"],

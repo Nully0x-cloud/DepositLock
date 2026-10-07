@@ -61,6 +61,14 @@ const PROGRAM_ERROR_NAMES: Record<number, string> = {
   6008: "The vault account is not the agreement's vault.",
   6009: "The source token account is invalid.",
   6010: "Your test token balance is too low for this deposit.",
+  6011: "Only the landlord recorded on the agreement can propose settlement terms.",
+  6012: "This agreement is not ready for a settlement action.",
+  6013: "There is no active settlement proposal to respond to.",
+  6014: "The settlement split does not match the protected deposit.",
+  6015: "The settlement proposal version could not be advanced.",
+  6016: "The settlement proposal does not match this agreement.",
+  6017: "The vault balance has changed; refresh the settlement before continuing.",
+  6018: "The recipient token account is invalid.",
 };
 
 /** Common Anchor/runtime error codes worth naming. */

@@ -1,0 +1,1494 @@
+{
+  "address": "FX2jWasLMqeG3X4ntc8jogMgxRdbMMSxKcfTWJxexQbY",
+  "metadata": {
+    "name": "deposit_lock",
+    "version": "0.1.0",
+    "spec": "0.1.0",
+    "description": "DepositLock protected rental deposit vault"
+  },
+  "instructions": [
+    {
+      "name": "approve_settlement",
+      "docs": [
+        "Tenant approval and exact PDA-signed payouts execute atomically."
+      ],
+      "discriminator": [
+        186,
+        5,
+        15,
+        163,
+        23,
+        10,
+        142,
+        12
+      ],
+      "accounts": [
+        {
+          "name": "tenant",
+          "docs": [
+            "The only party who can approve — and the payer for a missing landlord ATA."
+          ],
+          "writable": true,
+          "signer": true,
+          "relations": [
+            "agreement"
+          ]
+        },
+        {
+          "name": "landlord",
+          "docs": [
+            "used as the canonical ATA owner/transfer destination."
+          ],
+          "relations": [
+            "agreement"
+          ]
+        },
+        {
+          "name": "agreement",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  100,
+                  101,
+                  112,
+                  111,
+                  115,
+                  105,
+                  116
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "agreement.tenancy_id",
+                "account": "DepositAgreement"
+              }
+            ]
+          },
+          "relations": [
+            "settlement"
+          ]
+        },
+        {
+          "name": "settlement",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  115,
+                  101,
+                  116,
+                  116,
+                  108,
+                  101,
+                  109,
+                  101,
+                  110,
+                  116
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "agreement"
+              }
+            ]
+          }
+        },
+        {
+          "name": "mint"
+        },
+        {
+          "name": "vault",
+          "writable": true
+        },
+        {
+          "name": "tenant_token_account",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "account",
+                "path": "tenant"
+              },
+              {
+                "kind": "const",
+                "value": [
+                  6,
+                  221,
+                  246,
+                  225,
+                  215,
+                  101,
+                  161,
+                  147,
+                  217,
+                  203,
+                  225,
+                  70,
+                  206,
+                  235,
+                  121,
+                  172,
+                  28,
+                  180,
+                  133,
+                  237,
+                  95,
+                  91,
+                  55,
+                  145,
+                  58,
+                  140,
+                  245,
+                  133,
+                  126,
+                  255,
+                  0,
+                  169
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "mint"
+              }
+            ],
+            "program": {
+              "kind": "const",
+              "value": [
+                140,
+                151,
+                37,
+                143,
+                78,
+                36,
+                137,
+                241,
+                187,
+                61,
+                16,
+                41,
+                20,
+                142,
+                13,
+                131,
+                11,
+                90,
+                19,
+                153,
+                218,
+                255,
+                16,
+                132,
+                4,
+                142,
+                123,
+                216,
+                219,
+                233,
+                248,
+                89
+              ]
+            }
+          }
+        },
+        {
+          "name": "landlord_token_account",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "account",
+                "path": "landlord"
+              },
+              {
+                "kind": "const",
+                "value": [
+                  6,
+                  221,
+                  246,
+                  225,
+                  215,
+                  101,
+                  161,
+                  147,
+                  217,
+                  203,
+                  225,
+                  70,
+                  206,
+                  235,
+                  121,
+                  172,
+                  28,
+                  180,
+                  133,
+                  237,
+                  95,
+                  91,
+                  55,
+                  145,
+                  58,
+                  140,
+                  245,
+                  133,
+                  126,
+                  255,
+                  0,
+                  169
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "mint"
+              }
+            ],
+            "program": {
+              "kind": "const",
+              "value": [
+                140,
+                151,
+                37,
+                143,
+                78,
+                36,
+                137,
+                241,
+                187,
+                61,
+                16,
+                41,
+                20,
+                142,
+                13,
+                131,
+                11,
+                90,
+                19,
+                153,
+                218,
+                255,
+                16,
+                132,
+                4,
+                142,
+                123,
+                216,
+                219,
+                233,
+                248,
+                89
+              ]
+            }
+          }
+        },
+        {
+          "name": "token_program",
+          "address": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"
+        },
+        {
+          "name": "associated_token_program",
+          "address": "ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL"
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": [
+        {
+          "name": "expected_proposal_version",
+          "type": "u64"
+        },
+        {
+          "name": "expected_terms_hash",
+          "type": {
+            "array": [
+              "u8",
+              32
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "challenge_settlement",
+      "docs": [
+        "Tenant challenge freezes the agreement without moving tokens."
+      ],
+      "discriminator": [
+        124,
+        204,
+        242,
+        137,
+        177,
+        7,
+        153,
+        173
+      ],
+      "accounts": [
+        {
+          "name": "tenant",
+          "signer": true,
+          "relations": [
+            "agreement"
+          ]
+        },
+        {
+          "name": "agreement",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  100,
+                  101,
+                  112,
+                  111,
+                  115,
+                  105,
+                  116
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "agreement.tenancy_id",
+                "account": "DepositAgreement"
+              }
+            ]
+          },
+          "relations": [
+            "settlement"
+          ]
+        },
+        {
+          "name": "settlement",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  115,
+                  101,
+                  116,
+                  116,
+                  108,
+                  101,
+                  109,
+                  101,
+                  110,
+                  116
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "agreement"
+              }
+            ]
+          }
+        }
+      ],
+      "args": [
+        {
+          "name": "expected_proposal_version",
+          "type": "u64"
+        },
+        {
+          "name": "expected_terms_hash",
+          "type": {
+            "array": [
+              "u8",
+              32
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "fund_deposit",
+      "docs": [
+        "The tenant funds the exact required amount into the PDA-controlled vault."
+      ],
+      "discriminator": [
+        149,
+        24,
+        209,
+        94,
+        206,
+        202,
+        144,
+        233
+      ],
+      "accounts": [
+        {
+          "name": "tenant",
+          "docs": [
+            "The tenant — the only wallet allowed to fund. They sign this",
+            "transaction, which is exactly the authority the token transfer needs",
+            "to move funds out of their own token account into the vault."
+          ],
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "agreement",
+          "writable": true
+        },
+        {
+          "name": "mint"
+        },
+        {
+          "name": "source",
+          "docs": [
+            "The tenant's token account holding the funds to deposit."
+          ],
+          "writable": true
+        },
+        {
+          "name": "vault",
+          "docs": [
+            "The agreement's vault — the canonical ATA of the agreement PDA."
+          ],
+          "writable": true
+        },
+        {
+          "name": "token_program",
+          "address": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"
+        }
+      ],
+      "args": [
+        {
+          "name": "amount",
+          "type": "u64"
+        }
+      ]
+    },
+    {
+      "name": "initialize_config",
+      "docs": [
+        "One-time deployment configuration: records the accepted mint."
+      ],
+      "discriminator": [
+        208,
+        127,
+        21,
+        1,
+        194,
+        190,
+        196,
+        70
+      ],
+      "accounts": [
+        {
+          "name": "admin",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "config",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  100,
+                  101,
+                  112,
+                  111,
+                  115,
+                  105,
+                  116,
+                  108,
+                  111,
+                  99,
+                  107,
+                  95,
+                  99,
+                  111,
+                  110,
+                  102,
+                  105,
+                  103
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "mint",
+          "docs": [
+            "The mint this deployment will accept. Must already exist on-chain."
+          ]
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "initialize_deposit",
+      "docs": [
+        "Creates the Deposit Agreement PDA and its vault for a tenancy."
+      ],
+      "discriminator": [
+        171,
+        65,
+        93,
+        225,
+        61,
+        109,
+        31,
+        227
+      ],
+      "accounts": [
+        {
+          "name": "landlord",
+          "docs": [
+            "The landlord — the initializer becomes the agreement's landlord."
+          ],
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "tenant",
+          "docs": [
+            "stored address is enforced at funding. Must be a system-owned key",
+            "(a wallet), so a program address can never be recorded as tenant."
+          ]
+        },
+        {
+          "name": "config",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  100,
+                  101,
+                  112,
+                  111,
+                  115,
+                  105,
+                  116,
+                  108,
+                  111,
+                  99,
+                  107,
+                  95,
+                  99,
+                  111,
+                  110,
+                  102,
+                  105,
+                  103
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "mint"
+        },
+        {
+          "name": "agreement",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  100,
+                  101,
+                  112,
+                  111,
+                  115,
+                  105,
+                  116
+                ]
+              },
+              {
+                "kind": "arg",
+                "path": "tenancy_id"
+              }
+            ]
+          }
+        },
+        {
+          "name": "vault",
+          "docs": [
+            "Deterministic vault: the ATA of the agreement PDA for the accepted",
+            "mint. Its authority is the agreement itself, so only program rules",
+            "can ever move tokens out."
+          ],
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "account",
+                "path": "agreement"
+              },
+              {
+                "kind": "const",
+                "value": [
+                  6,
+                  221,
+                  246,
+                  225,
+                  215,
+                  101,
+                  161,
+                  147,
+                  217,
+                  203,
+                  225,
+                  70,
+                  206,
+                  235,
+                  121,
+                  172,
+                  28,
+                  180,
+                  133,
+                  237,
+                  95,
+                  91,
+                  55,
+                  145,
+                  58,
+                  140,
+                  245,
+                  133,
+                  126,
+                  255,
+                  0,
+                  169
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "mint"
+              }
+            ],
+            "program": {
+              "kind": "const",
+              "value": [
+                140,
+                151,
+                37,
+                143,
+                78,
+                36,
+                137,
+                241,
+                187,
+                61,
+                16,
+                41,
+                20,
+                142,
+                13,
+                131,
+                11,
+                90,
+                19,
+                153,
+                218,
+                255,
+                16,
+                132,
+                4,
+                142,
+                123,
+                216,
+                219,
+                233,
+                248,
+                89
+              ]
+            }
+          }
+        },
+        {
+          "name": "token_program",
+          "address": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"
+        },
+        {
+          "name": "associated_token_program",
+          "address": "ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL"
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": [
+        {
+          "name": "tenancy_id",
+          "type": {
+            "array": [
+              "u8",
+              16
+            ]
+          }
+        },
+        {
+          "name": "required_amount",
+          "type": "u64"
+        }
+      ]
+    },
+    {
+      "name": "initialize_settlement_proposal",
+      "docs": [
+        "Allocates the one settlement-proposal PDA attached to this agreement."
+      ],
+      "discriminator": [
+        119,
+        249,
+        114,
+        45,
+        48,
+        126,
+        253,
+        238
+      ],
+      "accounts": [
+        {
+          "name": "landlord",
+          "writable": true,
+          "signer": true,
+          "relations": [
+            "agreement"
+          ]
+        },
+        {
+          "name": "agreement"
+        },
+        {
+          "name": "settlement",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  115,
+                  101,
+                  116,
+                  116,
+                  108,
+                  101,
+                  109,
+                  101,
+                  110,
+                  116
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "agreement"
+              }
+            ]
+          }
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "propose_settlement",
+      "docs": [
+        "The landlord proposes a full return (`landlord_amount = 0`) or deduction."
+      ],
+      "discriminator": [
+        228,
+        149,
+        56,
+        61,
+        137,
+        43,
+        106,
+        25
+      ],
+      "accounts": [
+        {
+          "name": "landlord",
+          "signer": true,
+          "relations": [
+            "agreement"
+          ]
+        },
+        {
+          "name": "agreement",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  100,
+                  101,
+                  112,
+                  111,
+                  115,
+                  105,
+                  116
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "agreement.tenancy_id",
+                "account": "DepositAgreement"
+              }
+            ]
+          },
+          "relations": [
+            "settlement"
+          ]
+        },
+        {
+          "name": "settlement",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  115,
+                  101,
+                  116,
+                  116,
+                  108,
+                  101,
+                  109,
+                  101,
+                  110,
+                  116
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "agreement"
+              }
+            ]
+          }
+        },
+        {
+          "name": "mint"
+        },
+        {
+          "name": "vault"
+        }
+      ],
+      "args": [
+        {
+          "name": "landlord_amount",
+          "type": "u64"
+        },
+        {
+          "name": "expected_proposal_version",
+          "type": "u64"
+        },
+        {
+          "name": "terms_hash",
+          "type": {
+            "array": [
+              "u8",
+              32
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "withdraw_settlement_proposal",
+      "docs": [
+        "The landlord may withdraw only an unanswered proposal."
+      ],
+      "discriminator": [
+        106,
+        38,
+        221,
+        113,
+        143,
+        236,
+        169,
+        253
+      ],
+      "accounts": [
+        {
+          "name": "landlord",
+          "signer": true,
+          "relations": [
+            "agreement"
+          ]
+        },
+        {
+          "name": "agreement",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  100,
+                  101,
+                  112,
+                  111,
+                  115,
+                  105,
+                  116
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "agreement.tenancy_id",
+                "account": "DepositAgreement"
+              }
+            ]
+          },
+          "relations": [
+            "settlement"
+          ]
+        },
+        {
+          "name": "settlement",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  115,
+                  101,
+                  116,
+                  116,
+                  108,
+                  101,
+                  109,
+                  101,
+                  110,
+                  116
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "agreement"
+              }
+            ]
+          }
+        }
+      ],
+      "args": [
+        {
+          "name": "expected_proposal_version",
+          "type": "u64"
+        },
+        {
+          "name": "expected_terms_hash",
+          "type": {
+            "array": [
+              "u8",
+              32
+            ]
+          }
+        }
+      ]
+    }
+  ],
+  "accounts": [
+    {
+      "name": "DepositAgreement",
+      "discriminator": [
+        215,
+        134,
+        114,
+        207,
+        161,
+        37,
+        231,
+        136
+      ]
+    },
+    {
+      "name": "DepositLockConfig",
+      "discriminator": [
+        100,
+        201,
+        249,
+        97,
+        88,
+        98,
+        177,
+        123
+      ]
+    },
+    {
+      "name": "SettlementProposal",
+      "discriminator": [
+        219,
+        248,
+        36,
+        21,
+        1,
+        11,
+        107,
+        209
+      ]
+    }
+  ],
+  "errors": [
+    {
+      "code": 6000,
+      "name": "InvalidAmount",
+      "msg": "The deposit amount must be greater than zero"
+    },
+    {
+      "code": 6001,
+      "name": "AmountMismatch",
+      "msg": "The funding amount must exactly match the required deposit"
+    },
+    {
+      "code": 6002,
+      "name": "InvalidParticipant",
+      "msg": "The landlord and the tenant must be different wallets"
+    },
+    {
+      "code": 6003,
+      "name": "InvalidMint",
+      "msg": "That mint is not accepted by this DepositLock deployment"
+    },
+    {
+      "code": 6004,
+      "name": "InvalidDecimals",
+      "msg": "The mint decimals do not match this deployment's configuration"
+    },
+    {
+      "code": 6005,
+      "name": "UnauthorizedTenant",
+      "msg": "Only the tenant recorded on the agreement may fund it"
+    },
+    {
+      "code": 6006,
+      "name": "AlreadyFunded",
+      "msg": "This deposit has already been funded"
+    },
+    {
+      "code": 6007,
+      "name": "InvalidStatus",
+      "msg": "The agreement is not in the state this instruction requires"
+    },
+    {
+      "code": 6008,
+      "name": "InvalidVault",
+      "msg": "That vault does not belong to this deposit agreement"
+    },
+    {
+      "code": 6009,
+      "name": "InvalidSourceAccount",
+      "msg": "The source account is not the tenant's token account for this mint"
+    },
+    {
+      "code": 6010,
+      "name": "InsufficientFunds",
+      "msg": "The tenant does not hold enough tokens to fund the deposit"
+    },
+    {
+      "code": 6011,
+      "name": "UnauthorizedLandlord",
+      "msg": "Only the landlord recorded on this agreement may propose settlement"
+    },
+    {
+      "code": 6012,
+      "name": "InvalidSettlementState",
+      "msg": "This settlement instruction is not valid for the agreement state"
+    },
+    {
+      "code": 6013,
+      "name": "NoActiveSettlement",
+      "msg": "No active settlement proposal exists"
+    },
+    {
+      "code": 6014,
+      "name": "InvalidSettlementAmounts",
+      "msg": "The settlement split does not equal the protected deposit"
+    },
+    {
+      "code": 6015,
+      "name": "ProposalVersionOverflow",
+      "msg": "The proposal version overflowed"
+    },
+    {
+      "code": 6016,
+      "name": "InvalidSettlementProposal",
+      "msg": "The proposal PDA does not belong to this agreement"
+    },
+    {
+      "code": 6017,
+      "name": "VaultBalanceMismatch",
+      "msg": "The vault token balance does not equal the protected deposit"
+    },
+    {
+      "code": 6018,
+      "name": "InvalidRecipient",
+      "msg": "The settlement recipient token account is invalid"
+    }
+  ],
+  "types": [
+    {
+      "name": "AgreementStatus",
+      "docs": [
+        "Lifecycle of a deposit agreement.",
+        "",
+        "Variant order is part of the serialized account layout. Preserve the first",
+        "three discriminants (`Initialized = 0`, `Funded = 1`, `Closed = 2`) so",
+        "existing Phase 5 accounts remain readable; append Phase 6 states only."
+      ],
+      "type": {
+        "kind": "enum",
+        "variants": [
+          {
+            "name": "Initialized"
+          },
+          {
+            "name": "Funded"
+          },
+          {
+            "name": "Closed"
+          },
+          {
+            "name": "SettlementProposed"
+          },
+          {
+            "name": "Disputed"
+          }
+        ]
+      }
+    },
+    {
+      "name": "DepositAgreement",
+      "docs": [
+        "The on-chain deposit agreement for one accepted tenancy.",
+        "",
+        "Derived from `[b\"deposit\", tenancy_id_bytes]`; the account is the only",
+        "authority able to move the vault's tokens (via program invocation), which",
+        "is what makes the deposit non-custodial for both parties."
+      ],
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "version",
+            "docs": [
+              "Layout version (`AGREEMENT_VERSION`)."
+            ],
+            "type": "u8"
+          },
+          {
+            "name": "bump",
+            "docs": [
+              "Canonical bump of this PDA."
+            ],
+            "type": "u8"
+          },
+          {
+            "name": "status",
+            "docs": [
+              "Current lifecycle state."
+            ],
+            "type": {
+              "defined": {
+                "name": "AgreementStatus"
+              }
+            }
+          },
+          {
+            "name": "tenancy_id",
+            "docs": [
+              "Raw 16 bytes of the Supabase tenancy UUID (RFC 4122 byte order)."
+            ],
+            "type": {
+              "array": [
+                "u8",
+                16
+              ]
+            }
+          },
+          {
+            "name": "landlord",
+            "docs": [
+              "Wallet that initialized the agreement (the landlord)."
+            ],
+            "type": "pubkey"
+          },
+          {
+            "name": "tenant",
+            "docs": [
+              "Wallet allowed to fund the agreement — the stored tenant."
+            ],
+            "type": "pubkey"
+          },
+          {
+            "name": "mint",
+            "docs": [
+              "The accepted mint for this deployment, copied at initialization."
+            ],
+            "type": "pubkey"
+          },
+          {
+            "name": "vault",
+            "docs": [
+              "The vault token account (ATA of this agreement for `mint`)."
+            ],
+            "type": "pubkey"
+          },
+          {
+            "name": "required_amount",
+            "docs": [
+              "Required deposit, in mint base units. Integer only — never floats."
+            ],
+            "type": "u64"
+          },
+          {
+            "name": "deposited_amount",
+            "docs": [
+              "Amount actually transferred in (equals `required_amount` once funded)."
+            ],
+            "type": "u64"
+          },
+          {
+            "name": "created_at",
+            "docs": [
+              "Unix timestamp of initialization."
+            ],
+            "type": "i64"
+          },
+          {
+            "name": "funded_at",
+            "docs": [
+              "Unix timestamp of funding (0 until funded)."
+            ],
+            "type": "i64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "DepositLockConfig",
+      "docs": [
+        "Deployment-specific configuration.",
+        "",
+        "The accepted mint lives here rather than inside program logic so a",
+        "deployment can point at an official stablecoin or a clearly-labelled test",
+        "mint without code changes. Initialized once per deployment."
+      ],
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "version",
+            "docs": [
+              "Layout version (`CONFIG_VERSION`)."
+            ],
+            "type": "u8"
+          },
+          {
+            "name": "bump",
+            "docs": [
+              "Canonical bump of this PDA."
+            ],
+            "type": "u8"
+          },
+          {
+            "name": "admin",
+            "docs": [
+              "Wallet that initialized the configuration (the deployer)."
+            ],
+            "type": "pubkey"
+          },
+          {
+            "name": "allowed_mint",
+            "docs": [
+              "The only mint this deployment accepts for deposits."
+            ],
+            "type": "pubkey"
+          },
+          {
+            "name": "allowed_decimals",
+            "docs": [
+              "Decimals of `allowed_mint` at configuration time."
+            ],
+            "type": "u8"
+          },
+          {
+            "name": "created_at",
+            "docs": [
+              "Unix timestamp of configuration."
+            ],
+            "type": "i64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "SettlementProposal",
+      "docs": [
+        "On-chain commitment to one landlord-proposed split.",
+        "",
+        "It is a separate PDA so Phase 5 agreement account bytes and sizes do not",
+        "change. `proposal_version` increments each time a withdrawn proposal is",
+        "replaced, preventing approval against stale terms. Reasons and evidence",
+        "stay in Supabase; `terms_hash` binds the off-chain metadata snapshot."
+      ],
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "version",
+            "type": "u8"
+          },
+          {
+            "name": "bump",
+            "type": "u8"
+          },
+          {
+            "name": "agreement",
+            "type": "pubkey"
+          },
+          {
+            "name": "tenancy_id",
+            "type": {
+              "array": [
+                "u8",
+                16
+              ]
+            }
+          },
+          {
+            "name": "landlord",
+            "type": "pubkey"
+          },
+          {
+            "name": "tenant",
+            "type": "pubkey"
+          },
+          {
+            "name": "proposer",
+            "type": "pubkey"
+          },
+          {
+            "name": "proposal_type",
+            "type": {
+              "defined": {
+                "name": "SettlementType"
+              }
+            }
+          },
+          {
+            "name": "status",
+            "type": {
+              "defined": {
+                "name": "SettlementProposalStatus"
+              }
+            }
+          },
+          {
+            "name": "landlord_amount",
+            "type": "u64"
+          },
+          {
+            "name": "tenant_amount",
+            "type": "u64"
+          },
+          {
+            "name": "proposal_version",
+            "type": "u64"
+          },
+          {
+            "name": "terms_hash",
+            "type": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
+          },
+          {
+            "name": "proposed_at",
+            "type": "i64"
+          },
+          {
+            "name": "responded_at",
+            "type": "i64"
+          },
+          {
+            "name": "settled_tenant_amount",
+            "docs": [
+              "Final on-chain payouts after accounting for any tokens donated to the",
+              "vault outside the original exact funding transaction."
+            ],
+            "type": "u64"
+          },
+          {
+            "name": "settled_landlord_amount",
+            "type": "u64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "SettlementProposalStatus",
+      "docs": [
+        "Lifecycle of the one reusable proposal PDA attached to an agreement."
+      ],
+      "type": {
+        "kind": "enum",
+        "variants": [
+          {
+            "name": "Draft"
+          },
+          {
+            "name": "Active"
+          },
+          {
+            "name": "Withdrawn"
+          },
+          {
+            "name": "Challenged"
+          },
+          {
+            "name": "Executed"
+          }
+        ]
+      }
+    },
+    {
+      "name": "SettlementType",
+      "docs": [
+        "The two mutually agreed outcomes supported in Phase 6."
+      ],
+      "type": {
+        "kind": "enum",
+        "variants": [
+          {
+            "name": "FullReturn"
+          },
+          {
+            "name": "PartialDeduction"
+          }
+        ]
+      }
+    }
+  ]
+}

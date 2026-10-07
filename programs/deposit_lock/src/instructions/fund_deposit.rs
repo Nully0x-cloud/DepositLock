@@ -67,7 +67,9 @@ pub fn handle_fund_deposit(ctx: Context<FundDeposit>, amount: u64) -> Result<()>
     match ctx.accounts.agreement.status {
         AgreementStatus::Initialized => {}
         AgreementStatus::Funded => return err!(DepositLockError::AlreadyFunded),
-        AgreementStatus::Closed => return err!(DepositLockError::InvalidStatus),
+        AgreementStatus::Closed
+        | AgreementStatus::SettlementProposed
+        | AgreementStatus::Disputed => return err!(DepositLockError::InvalidStatus),
     }
 
     require!(

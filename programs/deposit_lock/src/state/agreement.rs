@@ -2,15 +2,16 @@ use anchor_lang::prelude::*;
 
 /// Lifecycle of a deposit agreement.
 ///
-/// Phase 5 uses `Initialized` and `Funded` only. `Closed` exists so a future
-/// release instruction can retire an account without inventing a new
-/// discriminant, and disputed/settlement states can be appended later without
-/// touching existing fields.
+/// Variant order is part of the serialized account layout. Preserve the first
+/// three discriminants (`Initialized = 0`, `Funded = 1`, `Closed = 2`) so
+/// existing Phase 5 accounts remain readable; append Phase 6 states only.
 #[derive(AnchorSerialize, AnchorDeserialize, Clone, Copy, Debug, PartialEq, Eq, InitSpace)]
 pub enum AgreementStatus {
     Initialized,
     Funded,
     Closed,
+    SettlementProposed,
+    Disputed,
 }
 
 /// The on-chain deposit agreement for one accepted tenancy.

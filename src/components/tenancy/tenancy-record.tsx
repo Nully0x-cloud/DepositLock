@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowLeft, Clock3, ReceiptText, RefreshCw, TriangleAlert, ShieldCheck } from "lucide-react";
+import { ArrowLeft, Clock3, RefreshCw, TriangleAlert, ShieldCheck } from "lucide-react";
 import Link from "next/link";
 import { useEffect } from "react";
 import { Badge, StatusBadge } from "@/components/ui/badge";
@@ -9,6 +9,7 @@ import { Card } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
 import { DepositFundingPanel } from "@/components/tenancy/deposit-funding-panel";
 import { DepositStatusBlock } from "@/components/tenancy/deposit-status-block";
+import { SettlementWorkflowPanel } from "@/components/tenancy/settlement-workflow-panel";
 import { EvidencePreview } from "@/components/tenancy/evidence-preview";
 import { IdentityRow } from "@/components/tenancy/identity-row";
 import { InvitationPanel } from "@/components/tenancy/invitation-panel";
@@ -323,24 +324,13 @@ export function TenancyRecord({ id }: { id: string }) {
         </Card>
       </div>
 
-      <Card padding="lg" className="border-dashed bg-cream-raised">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <div>
-            <p className="eyebrow text-subtle">Deductions</p>
-            <h2 className="mt-2 text-base font-semibold text-ink">
-              Proposed deductions
-            </h2>
-          </div>
-          <Badge tone="pending">Move-out review not started</Badge>
-        </div>
-
-        <EmptyState
-          icon={ReceiptText}
-          title="No deductions on this record"
-          description="Nothing has been proposed against this deposit. At move-out, any deduction will appear here with its supporting evidence and the other party’s response."
-          className="mt-5 bg-transparent"
+      {userId ? (
+        <SettlementWorkflowPanel
+          tenancy={tenancy}
+          viewerId={userId}
+          onRefresh={result.status === "ready" ? result.refresh : () => undefined}
         />
-      </Card>
+      ) : null}
     </div>
   );
 }

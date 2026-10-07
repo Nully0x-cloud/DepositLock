@@ -130,7 +130,6 @@ describe("statusView", () => {
     for (const status of [
       "move_out_review",
       "deduction_proposed",
-      "disputed",
       "settlement_pending",
     ]) {
       expect(statusView(status, null)).toEqual({
@@ -139,6 +138,11 @@ describe("statusView", () => {
         lifecycleStage: "move-out",
       });
     }
+    expect(statusView("disputed", null)).toEqual({
+      status: "disputed",
+      filterGroup: "active",
+      lifecycleStage: "move-out",
+    });
   });
 
   it("archives closed records and treats cancelled as an aborted agreement", () => {
@@ -168,6 +172,8 @@ describe("activityKind / evidenceRoom", () => {
     expect(activityKind("deduction_proposed")).toBe("deduction");
     expect(activityKind("dispute_opened")).toBe("deduction");
     expect(activityKind("settlement_completed")).toBe("settlement");
+    expect(activityKind("full_return_proposed")).toBe("settlement");
+    expect(activityKind("settlement_proposal_withdrawn")).toBe("settlement");
     expect(activityKind("tenancy_closed")).toBe("settlement");
     expect(activityKind("tenancy_created")).toBe("system");
     expect(activityKind("brand_new_event")).toBe("system");

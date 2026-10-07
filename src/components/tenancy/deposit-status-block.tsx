@@ -22,6 +22,10 @@ const statusCopy: Record<TenancyStatus, { label: string; note: string }> = {
     label: "Awaiting funding",
     note: "The deposit is protected once funding is confirmed.",
   },
+  disputed: {
+    label: "Under dispute",
+    note: "The full deposit remains locked while the proposed deduction is disputed.",
+  },
   closed: {
     label: "Released",
     note: "The agreed settlement has been executed and archived.",

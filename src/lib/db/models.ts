@@ -134,6 +134,7 @@ export type SettlementRecord = {
   id: string;
   tenancyId: string;
   originalDepositAmount: number;
+  surplusAmount: number;
   tenantAmount: number;
   landlordAmount: number;
   settlementType: "full_return" | "partial_deduction" | "disputed_resolution";
@@ -142,6 +143,36 @@ export type SettlementRecord = {
   blockchainTransaction: string | null;
   settledAt: string | null;
   createdAt: string;
+};
+
+export type SettlementProposalRecord = {
+  id: string;
+  tenancyId: string;
+  agreementAddress: string;
+  proposalAddress: string;
+  proposalVersion: number;
+  settlementType: "full_return" | "partial_deduction";
+  originalDepositAmount: number;
+  tenantAmount: number;
+  landlordAmount: number;
+  settledTenantAmount: number | null;
+  settledLandlordAmount: number | null;
+  termsHash: string;
+  evidenceIds: string[];
+  metadataVerified: boolean;
+  proposedByProfileId: string;
+  deductionId: string | null;
+  status: "proposed" | "withdrawn" | "challenged" | "executed";
+  proposalSignature: string;
+  withdrawalSignature: string | null;
+  challengeSignature: string | null;
+  executionSignature: string | null;
+  challengeReason: string | null;
+  disputeId: string | null;
+  proposedAt: string;
+  respondedAt: string | null;
+  executedAt: string | null;
+  verifiedAt: string;
 };
 
 export type ActivityEventRecord = {

@@ -222,8 +222,8 @@ export async function POST(
   if (agreement.requiredAmount !== expectedAmount) {
     mismatches.push("required amount");
   }
-  if (agreement.status === "closed") {
-    return error(409, id, "This deposit agreement has been closed.");
+  if (agreement.status !== "initialized" && agreement.status !== "funded") {
+    return error(409, id, "This agreement has moved beyond deposit funding.");
   }
   if (mismatches.length > 0) {
     return error(

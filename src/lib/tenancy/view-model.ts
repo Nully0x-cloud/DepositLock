@@ -61,9 +61,10 @@ export function statusView(
         : { status: "protected", filterGroup: "active", lifecycleStage: "protected" };
     case "move_out_review":
     case "deduction_proposed":
-    case "disputed":
     case "settlement_pending":
       return { status: "active", filterGroup: "active", lifecycleStage: "move-out" };
+    case "disputed":
+      return { status: "disputed", filterGroup: "active", lifecycleStage: "move-out" };
     case "closed":
       return { status: "closed", filterGroup: "closed", lifecycleStage: "released" };
     case "cancelled":
@@ -93,6 +94,8 @@ export function activityKind(eventType: string): ActivityKind {
       return "deduction";
     case "settlement_approved":
     case "settlement_completed":
+    case "full_return_proposed":
+    case "settlement_proposal_withdrawn":
     case "tenancy_closed":
       return "settlement";
     case "tenancy_created":

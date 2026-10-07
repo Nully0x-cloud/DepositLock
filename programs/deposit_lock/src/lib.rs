@@ -1,10 +1,9 @@
 //! DepositLock — protected rental deposit vault.
 //!
 //! One on-chain Deposit Agreement per accepted tenancy. The agreement PDA is
-//! the authority of a deterministic token vault; the tenant funds the exact
-//! required amount once, and from then on no single party (landlord, tenant,
-//! operator) can move the funds — Phase 5 intentionally ships **no**
-//! withdrawal instruction at all.
+//! the authority of a deterministic token vault. Phase 5 allows exact tenant
+//! funding; Phase 6 adds landlord proposals plus tenant-approved atomic
+//! settlement. A challenged agreement remains frozen with funds in its vault.
 //!
 //! Authorization model (see Phase 5 report):
 //! - `initialize_deposit` is signed by the landlord only (Option B). The
@@ -43,11 +42,76 @@ pub mod deposit_lock {
         tenancy_id: [u8; 16],
         required_amount: u64,
     ) -> Result<()> {
-        instructions::initialize_deposit::handle_initialize_deposit(ctx, tenancy_id, required_amount)
+        instructions::initialize_deposit::handle_initialize_deposit(
+            ctx,
+            tenancy_id,
+            required_amount,
+        )
     }
 
     /// The tenant funds the exact required amount into the PDA-controlled vault.
     pub fn fund_deposit(ctx: Context<FundDeposit>, amount: u64) -> Result<()> {
         instructions::fund_deposit::handle_fund_deposit(ctx, amount)
+    }
+
+    /// Allocates the one settlement-proposal PDA attached to this agreement.
+    pub fn initialize_settlement_proposal(
+        ctx: Context<InitializeSettlementProposal>,
+    ) -> Result<()> {
+        instructions::initialize_settlement_proposal::handle_initialize_settlement_proposal(ctx)
+    }
+
+    /// The landlord proposes a full return (`landlord_amount = 0`) or deduction.
+    pub fn propose_settlement(
+        ctx: Context<ProposeSettlement>,
+        landlord_amount: u64,
+        expected_proposal_version: u64,
+        terms_hash: [u8; 32],
+    ) -> Result<()> {
+        instructions::propose_settlement::handle_propose_settlement(
+            ctx,
+            landlord_amount,
+            expected_proposal_version,
+            terms_hash,
+        )
+    }
+
+    /// The landlord may withdraw only an unanswered proposal.
+    pub fn withdraw_settlement_proposal(
+        ctx: Context<WithdrawSettlementProposal>,
+        expected_proposal_version: u64,
+        expected_terms_hash: [u8; 32],
+    ) -> Result<()> {
+        instructions::withdraw_settlement_proposal::handle_withdraw_settlement_proposal(
+            ctx,
+            expected_proposal_version,
+            expected_terms_hash,
+        )
+    }
+
+    /// Tenant approval and exact PDA-signed payouts execute atomically.
+    pub fn approve_settlement(
+        ctx: Context<ApproveSettlement>,
+        expected_proposal_version: u64,
+        expected_terms_hash: [u8; 32],
+    ) -> Result<()> {
+        instructions::approve_settlement::handle_approve_settlement(
+            ctx,
+            expected_proposal_version,
+            expected_terms_hash,
+        )
+    }
+
+    /// Tenant challenge freezes the agreement without moving tokens.
+    pub fn challenge_settlement(
+        ctx: Context<ChallengeSettlement>,
+        expected_proposal_version: u64,
+        expected_terms_hash: [u8; 32],
+    ) -> Result<()> {
+        instructions::challenge_settlement::handle_challenge_settlement(
+            ctx,
+            expected_proposal_version,
+            expected_terms_hash,
+        )
     }
 }

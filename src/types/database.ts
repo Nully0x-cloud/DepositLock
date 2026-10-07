@@ -51,6 +51,7 @@ export type DisputeInsert = Public["Tables"]["disputes"]["Insert"];
 export type DisputeUpdate = Public["Tables"]["disputes"]["Update"];
 
 export type Settlement = Public["Tables"]["settlements"]["Row"];
+export type SettlementProposal = Public["Tables"]["settlement_proposals"]["Row"];
 
 export type ActivityEvent = Public["Tables"]["activity_events"]["Row"];
 export type ActivityEventInsert = Public["Tables"]["activity_events"]["Insert"];

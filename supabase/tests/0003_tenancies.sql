@@ -112,10 +112,11 @@ select throws_ok(
   'contract fields are frozen once the tenancy is protected'
 );
 
-select is(
-  pg_temp.acting('11111111-1111-4111-8111-111111111111', $sql$update public.tenancies set status = 'draft' where id = 'dddddddd-dddd-4ddd-8ddd-dddddddddddd'::uuid returning id::text$sql$),
-  'dddddddd-dddd-4ddd-8ddd-dddddddddddd',
-  'the landlord can move its own draft-stage tenancy backwards'
+select throws_ok(
+  $sql$select pg_temp.acting('11111111-1111-4111-8111-111111111111', $q$update public.tenancies set status = 'draft' where id = 'dddddddd-dddd-4ddd-8ddd-dddddddddddd'::uuid returning id::text$q$)$sql$,
+  '42501',
+  null,
+  'participants cannot write tenancy lifecycle states directly'
 );
 
 -- Inserts --------------------------------------------------------------------

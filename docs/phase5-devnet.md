@@ -17,7 +17,7 @@ The Rust/Anchor versions are pinned by `rust-toolchain.toml` and `Anchor.toml`. 
 
 ## Deploy and initialize
 
-From the WSL repository path (`/mnt/c/Users/okuma/Desktop/depositlock`), make sure `.keys/deployer.json` is funded with at least 1.5 Devnet SOL (2 SOL is recommended), then run:
+From the WSL repository path (`/mnt/c/Users/okuma/Desktop/depositlock`), make sure `.keys/deployer.json` is funded with at least 2.25 Devnet SOL (2.5 SOL is recommended for the Phase 6 program upgrade and test-wallet fees), then run:
 
 ```bash
 chmod +x scripts/devnet-bootstrap.sh

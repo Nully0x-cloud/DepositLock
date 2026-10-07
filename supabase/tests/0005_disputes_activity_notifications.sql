@@ -81,28 +81,28 @@ select is(
   'the tenancy starts with no dispute'
 );
 
-select ok(
-  pg_temp.acting('11111111-1111-4111-8111-111111111111', $sql$insert into public.disputes (tenancy_id, deduction_id, opened_by_profile_id, reason) values ('cccccccc-cccc-4ccc-8ccc-cccccccccccc', 'd0000003-0000-4000-8000-000000000001', '11111111-1111-4111-8111-111111111111', 'The wardrobe was already damaged at move-in') returning id::text$sql$) is not null,
-  'the tenant can open a dispute against a challenged deduction'
+select throws_ok(
+  $sql$select pg_temp.acting('11111111-1111-4111-8111-111111111111', $q$insert into public.disputes (tenancy_id, deduction_id, opened_by_profile_id, reason) values ('cccccccc-cccc-4ccc-8ccc-cccccccccccc', 'd0000003-0000-4000-8000-000000000001', '11111111-1111-4111-8111-111111111111', 'The wardrobe was already damaged at move-in') returning id::text$q$)$sql$,
+  '42501', null, 'a dispute row is created only after a verified on-chain challenge'
 );
 
 select throws_ok(
   $sql$select pg_temp.acting('22222222-2222-4222-8222-222222222222', $q$insert into public.disputes (tenancy_id, deduction_id, opened_by_profile_id, reason) values ('cccccccc-cccc-4ccc-8ccc-cccccccccccc', 'd0000003-0000-4000-8000-000000000001', '22222222-2222-4222-8222-222222222222', 'Second dispute on the same deduction') returning id::text$q$)$sql$,
-  '23505',
+  '42501',
   null,
   'only one active dispute may exist per deduction'
 );
 
 select throws_ok(
   $sql$select pg_temp.acting('11111111-1111-4111-8111-111111111111', $q$insert into public.disputes (tenancy_id, deduction_id, opened_by_profile_id, reason) values ('cccccccc-cccc-4ccc-8ccc-cccccccccccc', 'd0000001-0000-4000-8000-000000000001', '11111111-1111-4111-8111-111111111111', 'Dispute against an unchallenged deduction') returning id::text$q$)$sql$,
-  '23514',
+  '42501',
   null,
   'a dispute can only open against a challenged deduction'
 );
 
 select throws_ok(
   $sql$select pg_temp.acting('44444444-4444-4444-8444-444444444444', $q$insert into public.disputes (tenancy_id, deduction_id, opened_by_profile_id, reason) values ('cccccccc-cccc-4ccc-8ccc-cccccccccccc', 'd0000003-0000-4000-8000-000000000001', '44444444-4444-4444-8444-444444444444', 'An outsider disputes someone else''s deduction') returning id::text$q$)$sql$,
-  '23503',
+  '42501',
   null,
   'an outsider cannot even resolve a deduction to dispute'
 );

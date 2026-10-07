@@ -18,9 +18,14 @@ use {
         token::{spl_token, ID as TOKEN_PROGRAM_ID},
     },
     deposit_lock::{
-        accounts, error::DepositLockError, instruction,
-        state::{AgreementStatus, DepositAgreement, DepositLockConfig},
-        CONFIG_SEED, DEPOSIT_SEED,
+        accounts,
+        error::DepositLockError,
+        instruction,
+        state::{
+            AgreementStatus, DepositAgreement, DepositLockConfig, SettlementProposal,
+            SettlementProposalStatus, SettlementType,
+        },
+        CONFIG_SEED, DEPOSIT_SEED, SETTLEMENT_SEED,
     },
     litesvm::{types::TransactionResult, LiteSVM},
     solana_clock::Clock,
@@ -128,6 +133,10 @@ fn agreement_pda(tenancy_id: &[u8; 16]) -> Pubkey {
     Pubkey::find_program_address(&[DEPOSIT_SEED, tenancy_id.as_slice()], &deposit_lock::id()).0
 }
 
+fn settlement_pda(agreement: Pubkey) -> Pubkey {
+    Pubkey::find_program_address(&[SETTLEMENT_SEED, agreement.as_ref()], &deposit_lock::id()).0
+}
+
 fn create_mint(svm: &mut LiteSVM, payer: &Keypair, mint: &Keypair, decimals: u8) {
     let ix_create = system_instruction::create_account(
         &payer.pubkey(),
@@ -148,13 +157,12 @@ fn create_mint(svm: &mut LiteSVM, payer: &Keypair, mint: &Keypair, decimals: u8)
 }
 
 fn create_ata(svm: &mut LiteSVM, payer: &Keypair, wallet: Pubkey, mint: Pubkey) {
-    let ix =
-        spl_associated_token_account::instruction::create_associated_token_account_idempotent(
-            &payer.pubkey(),
-            &wallet,
-            &mint,
-            &TOKEN_PROGRAM_ID,
-        );
+    let ix = spl_associated_token_account::instruction::create_associated_token_account_idempotent(
+        &payer.pubkey(),
+        &wallet,
+        &mint,
+        &TOKEN_PROGRAM_ID,
+    );
     send_ok(svm, vec![ix], &[payer]);
 }
 
@@ -172,9 +180,13 @@ fn create_token_account(
         TOKEN_ACCOUNT_LEN,
         &TOKEN_PROGRAM_ID,
     );
-    let ix_init =
-        spl_token::instruction::initialize_account3(&TOKEN_PROGRAM_ID, &keypair.pubkey(), &mint, &owner)
-            .unwrap();
+    let ix_init = spl_token::instruction::initialize_account3(
+        &TOKEN_PROGRAM_ID,
+        &keypair.pubkey(),
+        &mint,
+        &owner,
+    )
+    .unwrap();
     send_ok(svm, vec![ix_create, ix_init], &[payer, keypair]);
 }
 
@@ -240,7 +252,13 @@ fn env_with(tenant_minted: u64) -> Env {
     if tenant_minted > 0 {
         create_ata(&mut svm, &tenant, tenant.pubkey(), mint.pubkey());
         let tenant_token_account = get_associated_token_address(&tenant.pubkey(), &mint.pubkey());
-        mint_tokens(&mut svm, &admin, mint.pubkey(), tenant_token_account, tenant_minted);
+        mint_tokens(
+            &mut svm,
+            &admin,
+            mint.pubkey(),
+            tenant_token_account,
+            tenant_minted,
+        );
     }
 
     Env {
@@ -325,6 +343,144 @@ fn ix_fund(
     }
 }
 
+fn ix_initialize_settlement(landlord: Pubkey, agreement: Pubkey) -> Instruction {
+    Instruction {
+        program_id: deposit_lock::id(),
+        accounts: accounts::InitializeSettlementProposal {
+            landlord,
+            agreement,
+            settlement: settlement_pda(agreement),
+            system_program: anchor_lang::solana_program::system_program::ID,
+        }
+        .to_account_metas(None),
+        data: instruction::InitializeSettlementProposal {}.data(),
+    }
+}
+
+fn ix_propose_settlement(
+    landlord: Pubkey,
+    agreement: Pubkey,
+    mint: Pubkey,
+    vault: Pubkey,
+    landlord_amount: u64,
+    terms_hash: [u8; 32],
+) -> Instruction {
+    ix_propose_settlement_version(
+        landlord,
+        agreement,
+        mint,
+        vault,
+        landlord_amount,
+        1,
+        terms_hash,
+    )
+}
+
+fn ix_propose_settlement_version(
+    landlord: Pubkey,
+    agreement: Pubkey,
+    mint: Pubkey,
+    vault: Pubkey,
+    landlord_amount: u64,
+    expected_proposal_version: u64,
+    terms_hash: [u8; 32],
+) -> Instruction {
+    Instruction {
+        program_id: deposit_lock::id(),
+        accounts: accounts::ProposeSettlement {
+            landlord,
+            agreement,
+            settlement: settlement_pda(agreement),
+            mint,
+            vault,
+        }
+        .to_account_metas(None),
+        data: instruction::ProposeSettlement {
+            landlord_amount,
+            expected_proposal_version,
+            terms_hash,
+        }
+        .data(),
+    }
+}
+
+fn ix_withdraw_proposal(
+    landlord: Pubkey,
+    agreement: Pubkey,
+    expected_proposal_version: u64,
+    expected_terms_hash: [u8; 32],
+) -> Instruction {
+    Instruction {
+        program_id: deposit_lock::id(),
+        accounts: accounts::WithdrawSettlementProposal {
+            landlord,
+            agreement,
+            settlement: settlement_pda(agreement),
+        }
+        .to_account_metas(None),
+        data: instruction::WithdrawSettlementProposal {
+            expected_proposal_version,
+            expected_terms_hash,
+        }
+        .data(),
+    }
+}
+
+fn ix_approve_settlement(
+    tenant: Pubkey,
+    landlord: Pubkey,
+    agreement: Pubkey,
+    mint: Pubkey,
+    vault: Pubkey,
+    expected_proposal_version: u64,
+    expected_terms_hash: [u8; 32],
+) -> Instruction {
+    Instruction {
+        program_id: deposit_lock::id(),
+        accounts: accounts::ApproveSettlement {
+            tenant,
+            landlord,
+            agreement,
+            settlement: settlement_pda(agreement),
+            mint,
+            vault,
+            tenant_token_account: get_associated_token_address(&tenant, &mint),
+            landlord_token_account: get_associated_token_address(&landlord, &mint),
+            token_program: TOKEN_PROGRAM_ID,
+            associated_token_program: ATA_PROGRAM_ID,
+            system_program: anchor_lang::solana_program::system_program::ID,
+        }
+        .to_account_metas(None),
+        data: instruction::ApproveSettlement {
+            expected_proposal_version,
+            expected_terms_hash,
+        }
+        .data(),
+    }
+}
+
+fn ix_challenge_settlement(
+    tenant: Pubkey,
+    agreement: Pubkey,
+    expected_proposal_version: u64,
+    expected_terms_hash: [u8; 32],
+) -> Instruction {
+    Instruction {
+        program_id: deposit_lock::id(),
+        accounts: accounts::ChallengeSettlement {
+            tenant,
+            agreement,
+            settlement: settlement_pda(agreement),
+        }
+        .to_account_metas(None),
+        data: instruction::ChallengeSettlement {
+            expected_proposal_version,
+            expected_terms_hash,
+        }
+        .data(),
+    }
+}
+
 fn ix_token_transfer(
     source: Pubkey,
     mint: Pubkey,
@@ -376,8 +532,25 @@ fn fund_ok(env: &mut Env, tenancy_id: [u8; 16], amount: u64) {
     send_ok(&mut env.svm, vec![ix], &[&env.tenant]);
 }
 
+fn fund_agreement_ok(env: &mut Env, tenancy_id: [u8; 16]) -> (Pubkey, Pubkey) {
+    init_config_ok(env);
+    let agreement = init_deposit_ok(env, tenancy_id, REQUIRED);
+    fund_ok(env, tenancy_id, REQUIRED);
+    let state = read_agreement(&env.svm, agreement);
+    (agreement, state.vault)
+}
+
+fn initialize_settlement_ok(env: &mut Env, agreement: Pubkey) -> Pubkey {
+    let proposal = settlement_pda(agreement);
+    let ix = ix_initialize_settlement(env.landlord.pubkey(), agreement);
+    send_ok(&mut env.svm, vec![ix], &[&env.landlord]);
+    proposal
+}
+
 fn read_agreement(svm: &LiteSVM, address: Pubkey) -> DepositAgreement {
-    let account = svm.get_account(&address).expect("agreement account missing");
+    let account = svm
+        .get_account(&address)
+        .expect("agreement account missing");
     assert_eq!(
         account.owner,
         deposit_lock::id(),
@@ -393,20 +566,28 @@ fn read_config(svm: &LiteSVM, address: Pubkey) -> DepositLockConfig {
     DepositLockConfig::try_deserialize(&mut data).expect("config deserialization failed")
 }
 
+fn read_settlement(svm: &LiteSVM, address: Pubkey) -> SettlementProposal {
+    let account = svm
+        .get_account(&address)
+        .expect("settlement proposal account missing");
+    assert_eq!(account.owner, deposit_lock::id());
+    let mut data: &[u8] = &account.data;
+    SettlementProposal::try_deserialize(&mut data)
+        .expect("settlement proposal deserialization failed")
+}
+
 /// SPL token account balance: `amount` lives at byte offset 64
 /// (mint 32 bytes + owner 32 bytes), u64 little endian.
 fn token_balance(svm: &LiteSVM, address: Pubkey) -> u64 {
-    let account = svm.get_account(&address).expect("token account missing");
+    let Some(account) = svm.get_account(&address) else {
+        return 0;
+    };
     u64::from_le_bytes(account.data[64..72].try_into().unwrap())
 }
 
 /// Directly rewrite agreement state (test-only), simulating corrupted or
 /// forged on-chain data that the program must still reject.
-fn overwrite_agreement(
-    env: &mut Env,
-    address: Pubkey,
-    mutate: impl FnOnce(&mut DepositAgreement),
-) {
+fn overwrite_agreement(env: &mut Env, address: Pubkey, mutate: impl FnOnce(&mut DepositAgreement)) {
     let mut agreement = read_agreement(&env.svm, address);
     mutate(&mut agreement);
     let mut data = Vec::new();
@@ -446,7 +627,11 @@ fn config_cannot_be_initialized_twice() {
     expect_failure(result, "second initialize_config");
 
     let config = read_config(&env.svm, config_pda());
-    assert_eq!(config.admin, env.admin.pubkey(), "existing config overwritten");
+    assert_eq!(
+        config.admin,
+        env.admin.pubkey(),
+        "existing config overwritten"
+    );
     assert_eq!(
         config.allowed_mint,
         env.mint.pubkey(),
@@ -490,8 +675,7 @@ fn deposit_initialization_creates_agreement_and_vault() {
     assert_eq!(state.deposited_amount, 0);
     assert_eq!(state.funded_at, 0);
     assert!(state.created_at > 0);
-    let (_, bump) =
-        Pubkey::find_program_address(&[DEPOSIT_SEED, &TENANCY_A], &deposit_lock::id());
+    let (_, bump) = Pubkey::find_program_address(&[DEPOSIT_SEED, &TENANCY_A], &deposit_lock::id());
     assert_eq!(state.bump, bump);
 
     let expected_vault = get_associated_token_address(&agreement, &env.mint.pubkey());
@@ -506,6 +690,28 @@ fn deposit_initialization_creates_agreement_and_vault() {
         0,
         "vault must start empty"
     );
+}
+
+#[test]
+fn phase5_agreement_size_and_serialized_status_discriminants_are_unchanged() {
+    let mut env = env();
+    init_config_ok(&mut env);
+    let agreement = init_deposit_ok(&mut env, TENANCY_A, REQUIRED);
+    let initialized = env.svm.get_account(&agreement).unwrap();
+    assert_eq!(
+        initialized.data.len(),
+        187,
+        "Phase 5 account bytes stay readable"
+    );
+    assert_eq!(
+        initialized.data[10], 0,
+        "Initialized remains enum discriminant 0"
+    );
+
+    fund_ok(&mut env, TENANCY_A, REQUIRED);
+    let funded = env.svm.get_account(&agreement).unwrap();
+    assert_eq!(funded.data.len(), 187);
+    assert_eq!(funded.data[10], 1, "Funded remains enum discriminant 1");
 }
 
 #[test]
@@ -778,7 +984,11 @@ fn funding_rejects_wrong_mint() {
         REQUIRED,
     );
     let result = send(&mut env.svm, vec![ix], &[&env.tenant]);
-    expect_custom(result, code(DepositLockError::InvalidMint), "wrong mint account");
+    expect_custom(
+        result,
+        code(DepositLockError::InvalidMint),
+        "wrong mint account",
+    );
     env.svm.expire_blockhash();
 
     // A source that belongs to a different mint is rejected as well
@@ -853,7 +1063,12 @@ fn funding_rejects_a_foreign_vault() {
     let source = get_associated_token_address(&env.tenant.pubkey(), &env.mint.pubkey());
 
     // Another wallet's token account for the same mint is not the vault.
-    create_ata(&mut env.svm, &env.outsider, env.outsider.pubkey(), env.mint.pubkey());
+    create_ata(
+        &mut env.svm,
+        &env.outsider,
+        env.outsider.pubkey(),
+        env.mint.pubkey(),
+    );
     let foreign_vault = get_associated_token_address(&env.outsider.pubkey(), &env.mint.pubkey());
 
     let ix = ix_fund(
@@ -865,7 +1080,11 @@ fn funding_rejects_a_foreign_vault() {
         REQUIRED,
     );
     let result = send(&mut env.svm, vec![ix], &[&env.tenant]);
-    expect_custom(result, code(DepositLockError::InvalidVault), "foreign vault");
+    expect_custom(
+        result,
+        code(DepositLockError::InvalidVault),
+        "foreign vault",
+    );
     assert_eq!(
         token_balance(&env.svm, foreign_vault),
         0,
@@ -976,7 +1195,12 @@ fn landlord_cannot_drain_the_vault() {
     // Direct token transfer attempted with the landlord's own signature:
     // the token program sees the vault's real authority (the PDA) does not
     // match and refuses. This is the on-chain form of "you cannot withdraw".
-    create_ata(&mut env.svm, &env.outsider, env.outsider.pubkey(), env.mint.pubkey());
+    create_ata(
+        &mut env.svm,
+        &env.outsider,
+        env.outsider.pubkey(),
+        env.mint.pubkey(),
+    );
     let destination = get_associated_token_address(&env.outsider.pubkey(), &env.mint.pubkey());
     let ix = ix_token_transfer(
         vault,
@@ -1103,4 +1327,635 @@ fn two_tenancies_are_isolated() {
     let vault_b = get_associated_token_address(&agreement_b, &env.mint.pubkey());
     assert_eq!(token_balance(&env.svm, vault_a), REQUIRED);
     assert_eq!(token_balance(&env.svm, vault_b), 0);
+}
+
+#[test]
+fn full_return_requires_tenant_approval_and_executes_atomically() {
+    let mut env = env();
+    let (agreement, vault) = fund_agreement_ok(&mut env, TENANCY_A);
+    let proposal = initialize_settlement_ok(&mut env, agreement);
+    let tenant_ata = get_associated_token_address(&env.tenant.pubkey(), &env.mint.pubkey());
+    let landlord_ata = get_associated_token_address(&env.landlord.pubkey(), &env.mint.pubkey());
+    let tenant_before = token_balance(&env.svm, tenant_ata);
+
+    let propose = ix_propose_settlement(
+        env.landlord.pubkey(),
+        agreement,
+        env.mint.pubkey(),
+        vault,
+        0,
+        [7; 32],
+    );
+    send_ok(&mut env.svm, vec![propose], &[&env.landlord]);
+
+    let pending = read_settlement(&env.svm, proposal);
+    assert_eq!(pending.status, SettlementProposalStatus::Active);
+    assert_eq!(pending.proposal_type, SettlementType::FullReturn);
+    assert_eq!(pending.landlord_amount, 0);
+    assert_eq!(pending.tenant_amount, REQUIRED);
+    assert_eq!(pending.proposal_version, 1);
+    assert_eq!(pending.terms_hash, [7; 32]);
+    assert_eq!(
+        read_agreement(&env.svm, agreement).status,
+        AgreementStatus::SettlementProposed
+    );
+    assert_eq!(
+        token_balance(&env.svm, vault),
+        REQUIRED,
+        "proposal cannot move tokens"
+    );
+    expect_custom(
+        send(
+            &mut env.svm,
+            vec![ix_challenge_settlement(
+                env.tenant.pubkey(),
+                agreement,
+                1,
+                [7; 32],
+            )],
+            &[&env.tenant],
+        ),
+        code(DepositLockError::InvalidSettlementState),
+        "a full return is approved rather than challenged as a deduction",
+    );
+
+    let approve = ix_approve_settlement(
+        env.tenant.pubkey(),
+        env.landlord.pubkey(),
+        agreement,
+        env.mint.pubkey(),
+        vault,
+        1,
+        [7; 32],
+    );
+    send_ok(&mut env.svm, vec![approve.clone()], &[&env.tenant]);
+
+    assert_eq!(
+        token_balance(&env.svm, tenant_ata),
+        tenant_before + REQUIRED
+    );
+    assert_eq!(token_balance(&env.svm, landlord_ata), 0);
+    assert_eq!(token_balance(&env.svm, vault), 0);
+    assert_eq!(
+        read_agreement(&env.svm, agreement).status,
+        AgreementStatus::Closed
+    );
+    let closed_account = env.svm.get_account(&agreement).unwrap();
+    assert_eq!(closed_account.data.len(), 187);
+    assert_eq!(
+        closed_account.data[10], 2,
+        "Closed remains Phase 5 enum discriminant 2"
+    );
+    assert_eq!(
+        read_settlement(&env.svm, proposal).status,
+        SettlementProposalStatus::Executed
+    );
+    let final_record = read_settlement(&env.svm, proposal);
+    assert_eq!(final_record.settled_tenant_amount, REQUIRED);
+    assert_eq!(final_record.settled_landlord_amount, 0);
+    let nonce_ix = system_instruction::transfer(&env.tenant.pubkey(), &env.landlord.pubkey(), 1);
+    expect_failure(
+        send(&mut env.svm, vec![nonce_ix, approve], &[&env.tenant]),
+        "full return replay",
+    );
+}
+
+#[test]
+fn agreed_deduction_pays_exact_split_to_canonical_wallet_atas() {
+    let mut env = env();
+    let (agreement, vault) = fund_agreement_ok(&mut env, TENANCY_A);
+    let proposal = initialize_settlement_ok(&mut env, agreement);
+    let landlord_ata = get_associated_token_address(&env.landlord.pubkey(), &env.mint.pubkey());
+    let tenant_ata = get_associated_token_address(&env.tenant.pubkey(), &env.mint.pubkey());
+    let tenant_before = token_balance(&env.svm, tenant_ata);
+    let landlord_before = env.svm.get_account(&landlord_ata).is_some();
+    let deduction = 150_000_000;
+
+    let propose = ix_propose_settlement(
+        env.landlord.pubkey(),
+        agreement,
+        env.mint.pubkey(),
+        vault,
+        deduction,
+        [9; 32],
+    );
+    send_ok(&mut env.svm, vec![propose], &[&env.landlord]);
+    let pending = read_settlement(&env.svm, proposal);
+    assert_eq!(pending.proposal_type, SettlementType::PartialDeduction);
+    assert_eq!(pending.landlord_amount, deduction);
+    assert_eq!(pending.tenant_amount, REQUIRED - deduction);
+
+    expect_failure(
+        send(
+            &mut env.svm,
+            vec![ix_approve_settlement(
+                env.landlord.pubkey(),
+                env.landlord.pubkey(),
+                agreement,
+                env.mint.pubkey(),
+                vault,
+                1,
+                [9; 32],
+            )],
+            &[&env.landlord],
+        ),
+        "landlord cannot approve their own settlement",
+    );
+
+    let approve = ix_approve_settlement(
+        env.tenant.pubkey(),
+        env.landlord.pubkey(),
+        agreement,
+        env.mint.pubkey(),
+        vault,
+        1,
+        [9; 32],
+    );
+    send_ok(&mut env.svm, vec![approve], &[&env.tenant]);
+
+    assert_eq!(
+        token_balance(&env.svm, tenant_ata),
+        tenant_before + REQUIRED - deduction
+    );
+    assert_eq!(token_balance(&env.svm, landlord_ata), deduction);
+    assert!(landlord_before || env.svm.get_account(&landlord_ata).is_some());
+    assert_eq!(token_balance(&env.svm, vault), 0);
+    assert_eq!(
+        read_agreement(&env.svm, agreement).status,
+        AgreementStatus::Closed
+    );
+    assert_eq!(
+        read_settlement(&env.svm, proposal).status,
+        SettlementProposalStatus::Executed
+    );
+    let final_record = read_settlement(&env.svm, proposal);
+    assert_eq!(final_record.settled_tenant_amount, REQUIRED - deduction);
+    assert_eq!(final_record.settled_landlord_amount, deduction);
+}
+
+#[test]
+fn unsolicited_vault_tokens_are_returned_to_tenant_instead_of_griefing_settlement() {
+    let mut env = env();
+    let (agreement, vault) = fund_agreement_ok(&mut env, TENANCY_A);
+    let proposal = initialize_settlement_ok(&mut env, agreement);
+    let landlord_amount = 150_000_000;
+    let donated = 12_345;
+    send_ok(
+        &mut env.svm,
+        vec![ix_propose_settlement(
+            env.landlord.pubkey(),
+            agreement,
+            env.mint.pubkey(),
+            vault,
+            landlord_amount,
+            [6; 32],
+        )],
+        &[&env.landlord],
+    );
+    // Classic SPL ATAs can receive unsolicited transfers; this must not let a
+    // third party permanently freeze the protected deposit.
+    mint_tokens(&mut env.svm, &env.admin, env.mint.pubkey(), vault, donated);
+
+    send_ok(
+        &mut env.svm,
+        vec![ix_approve_settlement(
+            env.tenant.pubkey(),
+            env.landlord.pubkey(),
+            agreement,
+            env.mint.pubkey(),
+            vault,
+            1,
+            [6; 32],
+        )],
+        &[&env.tenant],
+    );
+
+    let final_state = read_settlement(&env.svm, proposal);
+    assert_eq!(final_state.landlord_amount, landlord_amount);
+    assert_eq!(final_state.tenant_amount, REQUIRED - landlord_amount);
+    assert_eq!(final_state.settled_landlord_amount, landlord_amount);
+    assert_eq!(
+        final_state.settled_tenant_amount,
+        REQUIRED - landlord_amount + donated
+    );
+    assert_eq!(
+        token_balance(
+            &env.svm,
+            get_associated_token_address(&env.tenant.pubkey(), &env.mint.pubkey())
+        ),
+        TENANT_FULL - REQUIRED + REQUIRED - landlord_amount + donated
+    );
+    assert_eq!(
+        token_balance(
+            &env.svm,
+            get_associated_token_address(&env.landlord.pubkey(), &env.mint.pubkey())
+        ),
+        landlord_amount
+    );
+    assert_eq!(token_balance(&env.svm, vault), 0);
+}
+
+#[test]
+fn full_deposit_deduction_is_allowed_only_with_tenant_approval() {
+    let mut env = env();
+    let (agreement, vault) = fund_agreement_ok(&mut env, TENANCY_A);
+    let proposal = initialize_settlement_ok(&mut env, agreement);
+    let tenant_ata = get_associated_token_address(&env.tenant.pubkey(), &env.mint.pubkey());
+    let tenant_before = token_balance(&env.svm, tenant_ata);
+
+    send_ok(
+        &mut env.svm,
+        vec![ix_propose_settlement(
+            env.landlord.pubkey(),
+            agreement,
+            env.mint.pubkey(),
+            vault,
+            REQUIRED,
+            [4; 32],
+        )],
+        &[&env.landlord],
+    );
+    let proposal_state = read_settlement(&env.svm, proposal);
+    assert_eq!(
+        proposal_state.proposal_type,
+        SettlementType::PartialDeduction
+    );
+    assert_eq!(proposal_state.tenant_amount, 0);
+
+    send_ok(
+        &mut env.svm,
+        vec![ix_approve_settlement(
+            env.tenant.pubkey(),
+            env.landlord.pubkey(),
+            agreement,
+            env.mint.pubkey(),
+            vault,
+            1,
+            [4; 32],
+        )],
+        &[&env.tenant],
+    );
+    assert_eq!(token_balance(&env.svm, tenant_ata), tenant_before);
+    assert_eq!(
+        token_balance(
+            &env.svm,
+            get_associated_token_address(&env.landlord.pubkey(), &env.mint.pubkey())
+        ),
+        REQUIRED
+    );
+    assert_eq!(token_balance(&env.svm, vault), 0);
+}
+
+#[test]
+fn challenged_deduction_freezes_agreement_and_moves_no_tokens() {
+    let mut env = env();
+    let (agreement, vault) = fund_agreement_ok(&mut env, TENANCY_A);
+    let proposal = initialize_settlement_ok(&mut env, agreement);
+    send_ok(
+        &mut env.svm,
+        vec![ix_propose_settlement(
+            env.landlord.pubkey(),
+            agreement,
+            env.mint.pubkey(),
+            vault,
+            150_000_000,
+            [3; 32],
+        )],
+        &[&env.landlord],
+    );
+
+    let tenant_ata = get_associated_token_address(&env.tenant.pubkey(), &env.mint.pubkey());
+    let landlord_ata = get_associated_token_address(&env.landlord.pubkey(), &env.mint.pubkey());
+    let tenant_before = token_balance(&env.svm, tenant_ata);
+    let challenge = ix_challenge_settlement(env.tenant.pubkey(), agreement, 1, [3; 32]);
+    send_ok(&mut env.svm, vec![challenge.clone()], &[&env.tenant]);
+
+    assert_eq!(
+        read_agreement(&env.svm, agreement).status,
+        AgreementStatus::Disputed
+    );
+    assert_eq!(
+        read_settlement(&env.svm, proposal).status,
+        SettlementProposalStatus::Challenged
+    );
+    assert_eq!(token_balance(&env.svm, vault), REQUIRED);
+    assert_eq!(token_balance(&env.svm, tenant_ata), tenant_before);
+    assert!(env.svm.get_account(&landlord_ata).is_none());
+    let nonce_ix = system_instruction::transfer(&env.tenant.pubkey(), &env.landlord.pubkey(), 1);
+    expect_custom(
+        send(&mut env.svm, vec![nonce_ix, challenge], &[&env.tenant]),
+        code(DepositLockError::NoActiveSettlement),
+        "duplicate challenge",
+    );
+    expect_custom(
+        send(
+            &mut env.svm,
+            vec![ix_approve_settlement(
+                env.tenant.pubkey(),
+                env.landlord.pubkey(),
+                agreement,
+                env.mint.pubkey(),
+                vault,
+                1,
+                [3; 32],
+            )],
+            &[&env.tenant],
+        ),
+        code(DepositLockError::NoActiveSettlement),
+        "approval after dispute",
+    );
+}
+
+#[test]
+fn landlord_may_withdraw_and_replace_only_an_unanswered_proposal() {
+    let mut env = env();
+    let (agreement, vault) = fund_agreement_ok(&mut env, TENANCY_A);
+    let proposal = initialize_settlement_ok(&mut env, agreement);
+    send_ok(
+        &mut env.svm,
+        vec![ix_propose_settlement(
+            env.landlord.pubkey(),
+            agreement,
+            env.mint.pubkey(),
+            vault,
+            100_000_000,
+            [1; 32],
+        )],
+        &[&env.landlord],
+    );
+    send_ok(
+        &mut env.svm,
+        vec![ix_withdraw_proposal(
+            env.landlord.pubkey(),
+            agreement,
+            1,
+            [1; 32],
+        )],
+        &[&env.landlord],
+    );
+    assert_eq!(
+        read_agreement(&env.svm, agreement).status,
+        AgreementStatus::Funded
+    );
+    assert_eq!(
+        read_settlement(&env.svm, proposal).status,
+        SettlementProposalStatus::Withdrawn
+    );
+
+    send_ok(
+        &mut env.svm,
+        vec![ix_propose_settlement_version(
+            env.landlord.pubkey(),
+            agreement,
+            env.mint.pubkey(),
+            vault,
+            200_000_000,
+            2,
+            [2; 32],
+        )],
+        &[&env.landlord],
+    );
+    let current = read_settlement(&env.svm, proposal);
+    assert_eq!(current.proposal_version, 2);
+    assert_eq!(current.landlord_amount, 200_000_000);
+    assert_eq!(current.terms_hash, [2; 32]);
+
+    let stale_withdraw = ix_withdraw_proposal(env.landlord.pubkey(), agreement, 1, [1; 32]);
+    expect_custom(
+        send(
+            &mut env.svm,
+            vec![
+                system_instruction::transfer(&env.landlord.pubkey(), &env.tenant.pubkey(), 1),
+                stale_withdraw,
+            ],
+            &[&env.landlord],
+        ),
+        code(DepositLockError::InvalidSettlementProposal),
+        "stale landlord withdrawal cannot mutate replacement terms",
+    );
+    let stale_approval = ix_approve_settlement(
+        env.tenant.pubkey(),
+        env.landlord.pubkey(),
+        agreement,
+        env.mint.pubkey(),
+        vault,
+        1,
+        [1; 32],
+    );
+    expect_custom(
+        send(
+            &mut env.svm,
+            vec![
+                system_instruction::transfer(&env.tenant.pubkey(), &env.landlord.pubkey(), 1),
+                stale_approval,
+            ],
+            &[&env.tenant],
+        ),
+        code(DepositLockError::InvalidSettlementProposal),
+        "stale tenant approval cannot execute replacement terms",
+    );
+
+    send_ok(
+        &mut env.svm,
+        vec![ix_approve_settlement(
+            env.tenant.pubkey(),
+            env.landlord.pubkey(),
+            agreement,
+            env.mint.pubkey(),
+            vault,
+            2,
+            [2; 32],
+        )],
+        &[&env.tenant],
+    );
+    assert_eq!(
+        token_balance(
+            &env.svm,
+            get_associated_token_address(&env.landlord.pubkey(), &env.mint.pubkey())
+        ),
+        200_000_000
+    );
+}
+
+#[test]
+fn outsider_cannot_propose_approve_or_challenge() {
+    let mut env = env();
+    let (agreement, vault) = fund_agreement_ok(&mut env, TENANCY_A);
+    let proposal = initialize_settlement_ok(&mut env, agreement);
+
+    let bad_proposal = ix_propose_settlement(
+        env.outsider.pubkey(),
+        agreement,
+        env.mint.pubkey(),
+        vault,
+        0,
+        [0; 32],
+    );
+    expect_failure(
+        send(&mut env.svm, vec![bad_proposal], &[&env.outsider]),
+        "outsider proposal",
+    );
+
+    send_ok(
+        &mut env.svm,
+        vec![ix_propose_settlement(
+            env.landlord.pubkey(),
+            agreement,
+            env.mint.pubkey(),
+            vault,
+            10_000_000,
+            [5; 32],
+        )],
+        &[&env.landlord],
+    );
+    expect_failure(
+        send(
+            &mut env.svm,
+            vec![ix_approve_settlement(
+                env.outsider.pubkey(),
+                env.landlord.pubkey(),
+                agreement,
+                env.mint.pubkey(),
+                vault,
+                1,
+                [5; 32],
+            )],
+            &[&env.outsider],
+        ),
+        "outsider approval",
+    );
+    expect_failure(
+        send(
+            &mut env.svm,
+            vec![ix_challenge_settlement(
+                env.outsider.pubkey(),
+                agreement,
+                1,
+                [5; 32],
+            )],
+            &[&env.outsider],
+        ),
+        "outsider challenge",
+    );
+    assert_eq!(
+        read_settlement(&env.svm, proposal).status,
+        SettlementProposalStatus::Active
+    );
+    assert_eq!(token_balance(&env.svm, vault), REQUIRED);
+}
+
+#[test]
+fn oversized_deduction_and_mismatched_vault_balance_are_rejected() {
+    let mut env = env();
+    let (agreement, vault) = fund_agreement_ok(&mut env, TENANCY_A);
+    initialize_settlement_ok(&mut env, agreement);
+    expect_custom(
+        send(
+            &mut env.svm,
+            vec![ix_propose_settlement(
+                env.landlord.pubkey(),
+                agreement,
+                env.mint.pubkey(),
+                vault,
+                REQUIRED + 1,
+                [0; 32],
+            )],
+            &[&env.landlord],
+        ),
+        code(DepositLockError::InvalidSettlementAmounts),
+        "deduction above funded deposit",
+    );
+
+    let mut vault_account = env.svm.get_account(&vault).unwrap();
+    vault_account.data[64..72].copy_from_slice(&(REQUIRED - 1).to_le_bytes());
+    env.svm.set_account(vault.into(), vault_account).unwrap();
+    expect_custom(
+        send(
+            &mut env.svm,
+            vec![ix_propose_settlement(
+                env.landlord.pubkey(),
+                agreement,
+                env.mint.pubkey(),
+                vault,
+                0,
+                [0; 32],
+            )],
+            &[&env.landlord],
+        ),
+        code(DepositLockError::VaultBalanceMismatch),
+        "vault balance mismatch",
+    );
+}
+
+#[test]
+fn settlement_approval_rejects_substituted_mint_and_recipient_accounts() {
+    let mut env = env();
+    let (agreement, vault) = fund_agreement_ok(&mut env, TENANCY_A);
+    initialize_settlement_ok(&mut env, agreement);
+    let terms = [8; 32];
+    send_ok(
+        &mut env.svm,
+        vec![ix_propose_settlement(
+            env.landlord.pubkey(),
+            agreement,
+            env.mint.pubkey(),
+            vault,
+            100_000_000,
+            terms,
+        )],
+        &[&env.landlord],
+    );
+
+    expect_failure(
+        send(
+            &mut env.svm,
+            vec![ix_approve_settlement(
+                env.tenant.pubkey(),
+                env.landlord.pubkey(),
+                agreement,
+                env.other_mint.pubkey(),
+                vault,
+                1,
+                terms,
+            )],
+            &[&env.tenant],
+        ),
+        "approval with substituted mint",
+    );
+
+    let mut wrong_tenant_ata = ix_approve_settlement(
+        env.tenant.pubkey(),
+        env.landlord.pubkey(),
+        agreement,
+        env.mint.pubkey(),
+        vault,
+        1,
+        terms,
+    );
+    wrong_tenant_ata.accounts[6].pubkey = env.outsider.pubkey();
+    expect_failure(
+        send(&mut env.svm, vec![wrong_tenant_ata], &[&env.tenant]),
+        "approval with substituted tenant recipient",
+    );
+
+    let mut wrong_landlord_ata = ix_approve_settlement(
+        env.tenant.pubkey(),
+        env.landlord.pubkey(),
+        agreement,
+        env.mint.pubkey(),
+        vault,
+        1,
+        terms,
+    );
+    wrong_landlord_ata.accounts[7].pubkey = env.outsider.pubkey();
+    expect_failure(
+        send(&mut env.svm, vec![wrong_landlord_ata], &[&env.tenant]),
+        "approval with substituted landlord recipient",
+    );
+
+    assert_eq!(token_balance(&env.svm, vault), REQUIRED);
+    assert_eq!(
+        read_agreement(&env.svm, agreement).status,
+        AgreementStatus::SettlementProposed
+    );
 }

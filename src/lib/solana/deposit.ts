@@ -2,6 +2,7 @@ import { PublicKey, type Connection } from "@solana/web3.js";
 import {
   AGREEMENT_ACCOUNT_DISCRIMINATOR,
   CONFIG_ACCOUNT_DISCRIMINATOR,
+  DEPOSIT_LOCK_PROGRAM_ID,
   TOKEN_PROGRAM_ID,
   findDepositAgreementPda,
   findDepositConfigPda,
@@ -14,9 +15,20 @@ import {
  * repeats them independently when reconciling.
  */
 
-export type AgreementStatusName = "initialized" | "funded" | "closed";
+export type AgreementStatusName =
+  | "initialized"
+  | "funded"
+  | "closed"
+  | "settlement_proposed"
+  | "disputed";
 
-const AGREEMENT_STATUS_NAMES: AgreementStatusName[] = ["initialized", "funded", "closed"];
+const AGREEMENT_STATUS_NAMES: AgreementStatusName[] = [
+  "initialized",
+  "funded",
+  "closed",
+  "settlement_proposed",
+  "disputed",
+];
 
 /** Fixed layout length: 8 discriminator + 3 header + 16 + 4 pubkeys + 3 × u64/i64. */
 export const AGREEMENT_ACCOUNT_SIZE = 187;
@@ -139,6 +151,9 @@ export async function fetchDepositAgreement(
   const [address] = findDepositAgreementPda(tenancyIdBytes);
   const info = await connection.getAccountInfo(address);
   if (!info) return null;
+  if (!info.owner.equals(DEPOSIT_LOCK_PROGRAM_ID)) {
+    throw new Error("Agreement PDA is not owned by the DepositLock program.");
+  }
   return decodeAgreementAccount(address, info.data);
 }
 
@@ -149,6 +164,9 @@ export async function fetchDepositConfig(
   const [address] = findDepositConfigPda();
   const info = await connection.getAccountInfo(address);
   if (!info) return null;
+  if (!info.owner.equals(DEPOSIT_LOCK_PROGRAM_ID)) {
+    throw new Error("Config PDA is not owned by the DepositLock program.");
+  }
   return decodeConfigAccount(address, info.data);
 }
 

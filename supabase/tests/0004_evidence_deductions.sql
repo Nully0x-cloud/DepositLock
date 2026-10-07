@@ -114,43 +114,46 @@ select throws_ok(
 
 -- Deductions -----------------------------------------------------------------
 
-select ok(
-  pg_temp.acting('22222222-2222-4222-8222-222222222222', $sql$insert into public.deductions (tenancy_id, proposed_by_profile_id, amount, reason_category, description) values ('cccccccc-cccc-4ccc-8ccc-cccccccccccc', '22222222-2222-4222-8222-222222222222', 250, 'cleaning', 'Professional clean required') returning id::text$sql$) is not null,
-  'the landlord can propose a deduction inside the deposit'
+select throws_ok(
+  $sql$select pg_temp.acting('22222222-2222-4222-8222-222222222222', $q$insert into public.deductions (tenancy_id, proposed_by_profile_id, amount, reason_category, description) values ('cccccccc-cccc-4ccc-8ccc-cccccccccccc', '22222222-2222-4222-8222-222222222222', 250, 'cleaning', 'Professional clean required') returning id::text$q$)$sql$,
+  '42501',
+  null,
+  'deduction rows are written only after settlement proposal verification'
 );
 
 select throws_ok(
   $sql$select pg_temp.acting('11111111-1111-4111-8111-111111111111', $q$insert into public.deductions (tenancy_id, proposed_by_profile_id, amount, reason_category, description) values ('cccccccc-cccc-4ccc-8ccc-cccccccccccc', '11111111-1111-4111-8111-111111111111', 250, 'cleaning', 'Tenant trying to charge themselves') returning id::text$q$)$sql$,
-  '23514',
+  '42501',
   null,
-  'only the landlord may propose a deduction'
+  'tenant cannot write unverified deduction proposals'
 );
 
 select throws_ok(
   $sql$select pg_temp.acting('22222222-2222-4222-8222-222222222222', $q$insert into public.deductions (tenancy_id, proposed_by_profile_id, amount, reason_category, description) values ('cccccccc-cccc-4ccc-8ccc-cccccccccccc', '22222222-2222-4222-8222-222222222222', 5000, 'damage', 'More than the deposit held') returning id::text$q$)$sql$,
-  '23514',
+  '42501',
   null,
-  'a deduction can never exceed the protected deposit'
+  'landlord cannot write an unverified deduction proposal directly'
 );
 
-select is(
-  pg_temp.acting('11111111-1111-4111-8111-111111111111', $sql$update public.deductions set status = 'challenged' where id = 'd0000001-0000-4000-8000-000000000001'::uuid returning id::text$sql$),
-  'd0000001-0000-4000-8000-000000000001',
-  'the tenant can challenge a proposed deduction'
+select throws_ok(
+  $sql$select pg_temp.acting('11111111-1111-4111-8111-111111111111', $q$update public.deductions set status = 'challenged' where id = 'd0000001-0000-4000-8000-000000000001'::uuid returning id::text$q$)$sql$,
+  '42501',
+  null,
+  'challenge state is recorded only after the on-chain freeze is verified'
 );
 
 select throws_ok(
   $sql$select pg_temp.acting('22222222-2222-4222-8222-222222222222', $q$update public.deductions set status = 'accepted' where id = 'd0000003-0000-4000-8000-000000000001'::uuid returning id::text$q$)$sql$,
-  '23514',
+  '42501',
   null,
-  'only the tenant may accept or challenge a deduction'
+  'landlord cannot mark a deduction accepted without chain settlement'
 );
 
 select throws_ok(
   $sql$select pg_temp.acting('11111111-1111-4111-8111-111111111111', $q$update public.deductions set status = 'accepted', amount = 350 where id = 'd0000003-0000-4000-8000-000000000001'::uuid returning id::text$q$)$sql$,
-  '23514',
+  '42501',
   null,
-  'responding to a deduction may only change its status'
+  'tenant cannot update deduction details or response state directly'
 );
 
 select is(

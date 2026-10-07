@@ -9,6 +9,9 @@ describe("describeDepositLockError", () => {
     expect(describeDepositLockError("custom program error: 0x177a")).toBe(
       "Your test token balance is too low for this deposit.",
     );
+    expect(describeDepositLockError("custom program error: 0x1781")).toBe(
+      "The vault balance has changed; refresh the settlement before continuing.",
+    );
   });
 
   it("maps known Anchor errors and leaves unknown errors to their caller", () => {

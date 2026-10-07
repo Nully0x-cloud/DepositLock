@@ -40,5 +40,6 @@ export * from "./evidence";
 export * from "./deductions";
 export * from "./disputes";
 export * from "./settlements";
+export * from "./settlement-proposals";
 export * from "./activity";
 export * from "./notifications";

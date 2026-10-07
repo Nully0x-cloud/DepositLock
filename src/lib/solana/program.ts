@@ -1,6 +1,7 @@
 import { Buffer } from "buffer";
 import { PublicKey, TransactionInstruction } from "@solana/web3.js";
 import { DEPOSIT_LOCK_PROGRAM_ADDRESS } from "./deployment";
+import IDL from "./deposit-lock.idl.json";
 
 /**
  * DepositLock program primitives: addresses, PDAs and instruction builders.
@@ -12,6 +13,9 @@ import { DEPOSIT_LOCK_PROGRAM_ADDRESS } from "./deployment";
  */
 
 export const DEPOSIT_LOCK_PROGRAM_ID = new PublicKey(DEPOSIT_LOCK_PROGRAM_ADDRESS);
+if (IDL.address !== DEPOSIT_LOCK_PROGRAM_ADDRESS) {
+  throw new Error("The committed DepositLock IDL targets a different program address.");
+}
 
 export const TOKEN_PROGRAM_ID = new PublicKey(
   "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
@@ -25,25 +29,32 @@ export const SYSTEM_PROGRAM_ID = PublicKey.default;
 
 const CONFIG_SEED = Buffer.from("depositlock_config");
 const AGREEMENT_SEED = Buffer.from("deposit");
+const SETTLEMENT_SEED = Buffer.from("settlement");
 
-/** sha256("global:<name>")[0..8], precomputed — see program.test.ts. */
-export const INITIALIZE_CONFIG_DISCRIMINATOR = Uint8Array.from([
-  208, 127, 21, 1, 194, 190, 196, 70,
-]);
-export const INITIALIZE_DEPOSIT_DISCRIMINATOR = Uint8Array.from([
-  171, 65, 93, 225, 61, 109, 31, 227,
-]);
-export const FUND_DEPOSIT_DISCRIMINATOR = Uint8Array.from([
-  149, 24, 209, 94, 206, 202, 144, 233,
-]);
+function instructionDiscriminator(name: string): Uint8Array {
+  const instruction = IDL.instructions.find((entry) => entry.name === name);
+  if (!instruction) throw new Error(`Missing ${name} instruction from the committed Anchor IDL.`);
+  return Uint8Array.from(instruction.discriminator);
+}
 
-/** sha256("account:<Name>")[0..8] — the 8-byte Anchor account prefix. */
-export const AGREEMENT_ACCOUNT_DISCRIMINATOR = Uint8Array.from([
-  215, 134, 114, 207, 161, 37, 231, 136,
-]);
-export const CONFIG_ACCOUNT_DISCRIMINATOR = Uint8Array.from([
-  100, 201, 249, 97, 88, 98, 177, 123,
-]);
+function accountDiscriminator(name: string): Uint8Array {
+  const account = IDL.accounts.find((entry) => entry.name === name);
+  if (!account) throw new Error(`Missing ${name} account from the committed Anchor IDL.`);
+  return Uint8Array.from(account.discriminator);
+}
+
+/** Instruction/account discriminators are read from Anchor's generated IDL. */
+export const INITIALIZE_CONFIG_DISCRIMINATOR = instructionDiscriminator("initialize_config");
+export const INITIALIZE_DEPOSIT_DISCRIMINATOR = instructionDiscriminator("initialize_deposit");
+export const FUND_DEPOSIT_DISCRIMINATOR = instructionDiscriminator("fund_deposit");
+export const INITIALIZE_SETTLEMENT_PROPOSAL_DISCRIMINATOR = instructionDiscriminator("initialize_settlement_proposal");
+export const PROPOSE_SETTLEMENT_DISCRIMINATOR = instructionDiscriminator("propose_settlement");
+export const WITHDRAW_SETTLEMENT_PROPOSAL_DISCRIMINATOR = instructionDiscriminator("withdraw_settlement_proposal");
+export const APPROVE_SETTLEMENT_DISCRIMINATOR = instructionDiscriminator("approve_settlement");
+export const CHALLENGE_SETTLEMENT_DISCRIMINATOR = instructionDiscriminator("challenge_settlement");
+export const AGREEMENT_ACCOUNT_DISCRIMINATOR = accountDiscriminator("DepositAgreement");
+export const CONFIG_ACCOUNT_DISCRIMINATOR = accountDiscriminator("DepositLockConfig");
+export const SETTLEMENT_ACCOUNT_DISCRIMINATOR = accountDiscriminator("SettlementProposal");
 
 /** Deployment-specific configuration PDA (`["depositlock_config"]`). */
 export function findDepositConfigPda(): [PublicKey, number] {
@@ -60,6 +71,14 @@ export function findDepositConfigPda(): [PublicKey, number] {
 export function findDepositAgreementPda(tenancyIdBytes: Uint8Array): [PublicKey, number] {
   return PublicKey.findProgramAddressSync(
     [AGREEMENT_SEED, Buffer.from(tenancyIdBytes)],
+    DEPOSIT_LOCK_PROGRAM_ID,
+  );
+}
+
+/** Single mutable settlement proposal PDA for a Deposit Agreement. */
+export function findSettlementProposalPda(agreement: PublicKey): [PublicKey, number] {
+  return PublicKey.findProgramAddressSync(
+    [SETTLEMENT_SEED, agreement.toBuffer()],
     DEPOSIT_LOCK_PROGRAM_ID,
   );
 }
@@ -198,5 +217,165 @@ export function buildFundDepositInstruction(input: FundDepositInput): Transactio
       { pubkey: TOKEN_PROGRAM_ID, isSigner: false, isWritable: false },
     ],
     data: Buffer.from(concatBytes(FUND_DEPOSIT_DISCRIMINATOR, encodeU64(input.amount))),
+  });
+}
+
+export type SettlementIdentityInput = {
+  landlord: PublicKey;
+  tenancyIdBytes: Uint8Array;
+};
+
+function settlementAddresses(tenancyIdBytes: Uint8Array) {
+  const [agreement] = findDepositAgreementPda(tenancyIdBytes);
+  const [settlement] = findSettlementProposalPda(agreement);
+  return { agreement, settlement };
+}
+
+export function buildInitializeSettlementProposalInstruction(
+  input: SettlementIdentityInput,
+): TransactionInstruction {
+  const { agreement, settlement } = settlementAddresses(input.tenancyIdBytes);
+  return new TransactionInstruction({
+    programId: DEPOSIT_LOCK_PROGRAM_ID,
+    keys: [
+      { pubkey: input.landlord, isSigner: true, isWritable: true },
+      { pubkey: agreement, isSigner: false, isWritable: false },
+      { pubkey: settlement, isSigner: false, isWritable: true },
+      { pubkey: SYSTEM_PROGRAM_ID, isSigner: false, isWritable: false },
+    ],
+    data: Buffer.from(INITIALIZE_SETTLEMENT_PROPOSAL_DISCRIMINATOR),
+  });
+}
+
+export type ProposeSettlementInput = SettlementIdentityInput & {
+  mint: PublicKey;
+  landlordAmount: bigint;
+  expectedProposalVersion: bigint;
+  termsHash: Uint8Array;
+};
+
+export function buildProposeSettlementInstruction(
+  input: ProposeSettlementInput,
+): TransactionInstruction {
+  if (input.termsHash.length !== 32) {
+    throw new Error("Settlement terms hash must be 32 bytes.");
+  }
+  const { agreement, settlement } = settlementAddresses(input.tenancyIdBytes);
+  const vault = getAssociatedTokenAddressSync(input.mint, agreement);
+  return new TransactionInstruction({
+    programId: DEPOSIT_LOCK_PROGRAM_ID,
+    keys: [
+      { pubkey: input.landlord, isSigner: true, isWritable: false },
+      { pubkey: agreement, isSigner: false, isWritable: true },
+      { pubkey: settlement, isSigner: false, isWritable: true },
+      { pubkey: input.mint, isSigner: false, isWritable: false },
+      { pubkey: vault, isSigner: false, isWritable: false },
+    ],
+    data: Buffer.from(
+      concatBytes(
+        PROPOSE_SETTLEMENT_DISCRIMINATOR,
+        encodeU64(input.landlordAmount),
+        encodeU64(input.expectedProposalVersion),
+        input.termsHash,
+      ),
+    ),
+  });
+}
+
+export function buildWithdrawSettlementProposalInstruction(
+  input: SettlementIdentityInput & {
+    expectedProposalVersion: bigint;
+    expectedTermsHash: Uint8Array;
+  },
+): TransactionInstruction {
+  if (input.expectedTermsHash.length !== 32) {
+    throw new Error("Settlement terms hash must be 32 bytes.");
+  }
+  const { agreement, settlement } = settlementAddresses(input.tenancyIdBytes);
+  return new TransactionInstruction({
+    programId: DEPOSIT_LOCK_PROGRAM_ID,
+    keys: [
+      { pubkey: input.landlord, isSigner: true, isWritable: false },
+      { pubkey: agreement, isSigner: false, isWritable: true },
+      { pubkey: settlement, isSigner: false, isWritable: true },
+    ],
+    data: Buffer.from(concatBytes(
+      WITHDRAW_SETTLEMENT_PROPOSAL_DISCRIMINATOR,
+      encodeU64(input.expectedProposalVersion),
+      input.expectedTermsHash,
+    )),
+  });
+}
+
+export type ApproveSettlementInput = {
+  tenant: PublicKey;
+  landlord: PublicKey;
+  mint: PublicKey;
+  tenancyIdBytes: Uint8Array;
+  expectedProposalVersion: bigint;
+  expectedTermsHash: Uint8Array;
+};
+
+export function buildApproveSettlementInstruction(
+  input: ApproveSettlementInput,
+): TransactionInstruction {
+  if (input.expectedTermsHash.length !== 32) {
+    throw new Error("Settlement terms hash must be 32 bytes.");
+  }
+  const { agreement, settlement } = settlementAddresses(input.tenancyIdBytes);
+  const vault = getAssociatedTokenAddressSync(input.mint, agreement);
+  return new TransactionInstruction({
+    programId: DEPOSIT_LOCK_PROGRAM_ID,
+    keys: [
+      { pubkey: input.tenant, isSigner: true, isWritable: true },
+      { pubkey: input.landlord, isSigner: false, isWritable: false },
+      { pubkey: agreement, isSigner: false, isWritable: true },
+      { pubkey: settlement, isSigner: false, isWritable: true },
+      { pubkey: input.mint, isSigner: false, isWritable: false },
+      { pubkey: vault, isSigner: false, isWritable: true },
+      {
+        pubkey: getAssociatedTokenAddressSync(input.mint, input.tenant),
+        isSigner: false,
+        isWritable: true,
+      },
+      {
+        pubkey: getAssociatedTokenAddressSync(input.mint, input.landlord),
+        isSigner: false,
+        isWritable: true,
+      },
+      { pubkey: TOKEN_PROGRAM_ID, isSigner: false, isWritable: false },
+      { pubkey: ASSOCIATED_TOKEN_PROGRAM_ID, isSigner: false, isWritable: false },
+      { pubkey: SYSTEM_PROGRAM_ID, isSigner: false, isWritable: false },
+    ],
+    data: Buffer.from(concatBytes(
+      APPROVE_SETTLEMENT_DISCRIMINATOR,
+      encodeU64(input.expectedProposalVersion),
+      input.expectedTermsHash,
+    )),
+  });
+}
+
+export function buildChallengeSettlementInstruction(input: {
+  tenant: PublicKey;
+  tenancyIdBytes: Uint8Array;
+  expectedProposalVersion: bigint;
+  expectedTermsHash: Uint8Array;
+}): TransactionInstruction {
+  if (input.expectedTermsHash.length !== 32) {
+    throw new Error("Settlement terms hash must be 32 bytes.");
+  }
+  const { agreement, settlement } = settlementAddresses(input.tenancyIdBytes);
+  return new TransactionInstruction({
+    programId: DEPOSIT_LOCK_PROGRAM_ID,
+    keys: [
+      { pubkey: input.tenant, isSigner: true, isWritable: false },
+      { pubkey: agreement, isSigner: false, isWritable: true },
+      { pubkey: settlement, isSigner: false, isWritable: true },
+    ],
+    data: Buffer.from(concatBytes(
+      CHALLENGE_SETTLEMENT_DISCRIMINATOR,
+      encodeU64(input.expectedProposalVersion),
+      input.expectedTermsHash,
+    )),
   });
 }

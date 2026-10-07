@@ -259,15 +259,58 @@ isOneToOne: false
       referencedColumns: ["id"]
     }
                   ]
-                },"settlements": {
+                },"settlement_proposals": {
                   Row: {
-                    "blockchain_transaction": string | null,"created_at": string,"id": string,"landlord_amount": number,"landlord_approved": boolean,"original_deposit_amount": number,"settled_at": string | null,"settlement_type": string,"tenancy_id": string,"tenant_amount": number,"tenant_approved": boolean
+                    "agreement_address": string,"challenge_reason": string | null,"challenge_signature": string | null,"created_at": string,"deduction_id": string | null,"dispute_id": string | null,"evidence_ids": (string)[],"executed_at": string | null,"execution_signature": string | null,"id": string,"landlord_amount": number,"metadata_verified": boolean,"original_deposit_amount": number,"proposal_address": string,"proposal_signature": string,"proposal_version": number,"proposed_at": string,"proposed_by_profile_id": string,"responded_at": string | null,"settled_landlord_amount": number | null,"settled_tenant_amount": number | null,"settlement_type": string,"status": string,"tenancy_id": string,"tenant_amount": number,"terms_hash": string,"updated_at": string,"verified_at": string,"withdrawal_signature": string | null
                   }
                   Insert: {
-                    "blockchain_transaction"?: string | null,"created_at"?: string,"id"?: string,"landlord_amount": number,"landlord_approved"?: boolean,"original_deposit_amount": number,"settled_at"?: string | null,"settlement_type": string,"tenancy_id": string,"tenant_amount": number,"tenant_approved"?: boolean
+                    "agreement_address": string,"challenge_reason"?: string | null,"challenge_signature"?: string | null,"created_at"?: string,"deduction_id"?: string | null,"dispute_id"?: string | null,"evidence_ids"?: (string)[],"executed_at"?: string | null,"execution_signature"?: string | null,"id"?: string,"landlord_amount": number,"metadata_verified"?: boolean,"original_deposit_amount": number,"proposal_address": string,"proposal_signature": string,"proposal_version": number,"proposed_at"?: string,"proposed_by_profile_id": string,"responded_at"?: string | null,"settled_landlord_amount"?: number | null,"settled_tenant_amount"?: number | null,"settlement_type": string,"status"?: string,"tenancy_id": string,"tenant_amount": number,"terms_hash": string,"updated_at"?: string,"verified_at"?: string,"withdrawal_signature"?: string | null
                   }
                   Update: {
-                    "blockchain_transaction"?: string | null,"created_at"?: string,"id"?: string,"landlord_amount"?: number,"landlord_approved"?: boolean,"original_deposit_amount"?: number,"settled_at"?: string | null,"settlement_type"?: string,"tenancy_id"?: string,"tenant_amount"?: number,"tenant_approved"?: boolean
+                    "agreement_address"?: string,"challenge_reason"?: string | null,"challenge_signature"?: string | null,"created_at"?: string,"deduction_id"?: string | null,"dispute_id"?: string | null,"evidence_ids"?: (string)[],"executed_at"?: string | null,"execution_signature"?: string | null,"id"?: string,"landlord_amount"?: number,"metadata_verified"?: boolean,"original_deposit_amount"?: number,"proposal_address"?: string,"proposal_signature"?: string,"proposal_version"?: number,"proposed_at"?: string,"proposed_by_profile_id"?: string,"responded_at"?: string | null,"settled_landlord_amount"?: number | null,"settled_tenant_amount"?: number | null,"settlement_type"?: string,"status"?: string,"tenancy_id"?: string,"tenant_amount"?: number,"terms_hash"?: string,"updated_at"?: string,"verified_at"?: string,"withdrawal_signature"?: string | null
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "settlement_proposals_deduction_id_fkey"
+      columns: ["deduction_id"]
+isOneToOne: false
+      referencedRelation: "deductions"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "settlement_proposals_dispute_id_fkey"
+      columns: ["dispute_id"]
+isOneToOne: false
+      referencedRelation: "disputes"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "settlement_proposals_proposed_by_profile_id_fkey"
+      columns: ["proposed_by_profile_id"]
+isOneToOne: false
+      referencedRelation: "profiles"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "settlement_proposals_proposed_by_profile_id_fkey"
+      columns: ["proposed_by_profile_id"]
+isOneToOne: false
+      referencedRelation: "v_shared_profiles"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "settlement_proposals_tenancy_id_fkey"
+      columns: ["tenancy_id"]
+isOneToOne: false
+      referencedRelation: "tenancies"
+      referencedColumns: ["id"]
+    }
+                  ]
+                },"settlements": {
+                  Row: {
+                    "blockchain_transaction": string | null,"created_at": string,"id": string,"landlord_amount": number,"landlord_approved": boolean,"original_deposit_amount": number,"settled_at": string | null,"settlement_type": string,"surplus_amount": number,"tenancy_id": string,"tenant_amount": number,"tenant_approved": boolean
+                  }
+                  Insert: {
+                    "blockchain_transaction"?: string | null,"created_at"?: string,"id"?: string,"landlord_amount": number,"landlord_approved"?: boolean,"original_deposit_amount": number,"settled_at"?: string | null,"settlement_type": string,"surplus_amount"?: number,"tenancy_id": string,"tenant_amount": number,"tenant_approved"?: boolean
+                  }
+                  Update: {
+                    "blockchain_transaction"?: string | null,"created_at"?: string,"id"?: string,"landlord_amount"?: number,"landlord_approved"?: boolean,"original_deposit_amount"?: number,"settled_at"?: string | null,"settlement_type"?: string,"surplus_amount"?: number,"tenancy_id"?: string,"tenant_amount"?: number,"tenant_approved"?: boolean
                   }
                   Relationships: [
                     {
@@ -444,11 +487,26 @@ isOneToOne: false
 "mark_deposit_protected":
 { Args: { "p_agreement_address": string,"p_decimals": number,"p_deposited_amount": number,"p_funding_signature": string,"p_mint_address": string,"p_onchain_funded_at": string,"p_required_amount": number,"p_tenancy_id": string,"p_vault_address": string }; Returns: Json
                            },
+"mark_settlement_executed":
+{ Args: { "p_decimals": number,"p_execution_signature": string,"p_landlord_amount": number,"p_onchain_executed_at": string,"p_original_amount": number,"p_proposal_version": number,"p_tenancy_id": string,"p_tenant_amount": number,"p_tenant_profile_id": string }; Returns: Json
+                           },
 "record_deposit_agreement":
 { Args: { "p_agreement_address": string,"p_decimals": number,"p_initialization_signature": string,"p_mint_address": string,"p_required_amount": number,"p_tenancy_id": string,"p_vault_address": string }; Returns: Json
                            },
+"record_settlement_dispute":
+{ Args: { "p_agreement_address": string,"p_challenge_signature": string,"p_decimals": number,"p_evidence_ids"?: (string)[],"p_landlord_amount": number,"p_original_amount": number,"p_proposal_address": string,"p_proposal_signature": string,"p_proposal_version": number,"p_reason": string,"p_settlement_type": string,"p_tenancy_id": string,"p_tenant_amount": number,"p_tenant_profile_id": string,"p_terms_hash": string }; Returns: Json
+                           },
+"record_settlement_proposal":
+{ Args: { "p_agreement_address": string,"p_decimals": number,"p_description"?: string,"p_evidence_ids"?: (string)[],"p_landlord_amount": number,"p_landlord_profile_id": string,"p_original_amount": number,"p_proposal_address": string,"p_proposal_signature": string,"p_proposal_version": number,"p_reason_category"?: string,"p_settlement_type": string,"p_tenancy_id": string,"p_tenant_amount": number,"p_terms_hash": string }; Returns: Json
+                           },
+"record_settlement_withdrawal":
+{ Args: { "p_landlord_profile_id": string,"p_proposal_version": number,"p_tenancy_id": string,"p_withdrawal_signature": string }; Returns: Json
+                           },
 "resolve_tenancy_invitation":
 { Args: { "p_token": string }; Returns: Json
+                           },
+"start_move_out_review":
+{ Args: { "p_landlord_profile_id": string,"p_tenancy_id": string }; Returns: Json
                            },
 "verified_wallet_address":
 { Args: { "p_user_id": string }; Returns: string

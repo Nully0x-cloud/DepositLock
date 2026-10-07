@@ -25,6 +25,7 @@ const statusTone: Record<TenancyStatus, BadgeTone> = {
   protected: "protected",
   active: "active",
   pending: "pending",
+  disputed: "dispute",
   closed: "closed",
 };
 
@@ -32,6 +33,7 @@ const statusLabel: Record<TenancyStatus, string> = {
   protected: "Protected",
   active: "Active",
   pending: "Pending",
+  disputed: "Under dispute",
   closed: "Closed",
 };
 
@@ -74,8 +76,10 @@ export function StatusDot({ status }: { status: TenancyStatus }) {
   const color =
     status === "protected" || status === "active"
       ? "bg-protected"
-      : status === "pending"
-        ? "bg-pending"
+    : status === "pending"
+      ? "bg-pending"
+      : status === "disputed"
+        ? "bg-dispute"
         : "bg-closed";
 
   return (

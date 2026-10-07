@@ -1,4 +1,4 @@
-export type TenancyStatus = "protected" | "active" | "pending" | "closed";
+export type TenancyStatus = "protected" | "active" | "pending" | "disputed" | "closed";
 
 export type TenancyFilter = "all" | "active" | "pending" | "closed";
 

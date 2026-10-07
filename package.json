@@ -11,6 +11,8 @@
     "test:siws": "node scripts/verify-siws.mjs",
     "devnet:init-config": "node scripts/devnet-init-config.mjs",
     "devnet:e2e": "node scripts/e2e-deposit-devnet.mjs",
+    "solana:idl": "node scripts/sync-program-idl.mjs",
+    "devnet:settlement-e2e": "node scripts/e2e-settlement-devnet.mjs",
     "test:db": "supabase test db",
     "db:start": "supabase start",
     "db:stop": "supabase stop",
