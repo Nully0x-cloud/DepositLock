@@ -97,7 +97,10 @@ export type EvidenceRecord = {
   evidenceContext: "move_in" | "move_out" | "deduction" | "dispute";
   deductionId: string | null;
   category: string;
+  mimeType: string | null;
+  fileSizeBytes: number | null;
   fileUrl: string | null;
+  previewUrl: string | null;
   caption: string;
   createdAt: string;
 };

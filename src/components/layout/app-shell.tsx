@@ -6,6 +6,7 @@ import { useEffect, useState, type ReactNode } from "react";
 import { Brand } from "@/components/layout/brand";
 import { Container } from "@/components/layout/container";
 import { AppNavList, AppSidebar } from "@/components/layout/app-sidebar";
+import { NotificationBell } from "@/components/app/notification-bell";
 import { HeaderIdentity, WalletControl } from "@/components/wallet/wallet-control";
 import { VerifyWalletButton } from "@/components/wallet/verify-wallet-button";
 import { useProfile } from "@/hooks/use-profile";
@@ -76,6 +77,7 @@ export function AppShell({ children }: AppShellProps) {
               </div>
 
               <div className="flex items-center gap-2 sm:gap-3">
+                <NotificationBell />
                 <VerifyWalletButton />
                 <WalletControl />
                 <HeaderIdentity

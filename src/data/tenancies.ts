@@ -124,6 +124,7 @@ const camdenActivity: ActivityEvent[] = [
     timestamp: "2026-09-01T10:24:00Z",
     actor: "Sarah Byrne",
     kind: "evidence",
+    blockchainReference: null,
   },
   {
     id: "act-camden-2",
@@ -132,6 +133,7 @@ const camdenActivity: ActivityEvent[] = [
     timestamp: "2026-08-26T14:02:00Z",
     actor: "DepositLock",
     kind: "deposit",
+    blockchainReference: null,
   },
   {
     id: "act-camden-3",
@@ -140,6 +142,7 @@ const camdenActivity: ActivityEvent[] = [
     timestamp: "2026-08-24T09:41:00Z",
     actor: "Michael O'Connor",
     kind: "agreement",
+    blockchainReference: null,
   },
   {
     id: "act-camden-4",
@@ -148,6 +151,7 @@ const camdenActivity: ActivityEvent[] = [
     timestamp: "2026-08-17T16:10:00Z",
     actor: "Michael O'Connor",
     kind: "system",
+    blockchainReference: null,
   },
 ];
 
@@ -159,6 +163,7 @@ const rathminesActivity: ActivityEvent[] = [
     timestamp: "2026-07-02T11:15:00Z",
     actor: "Declan Moore",
     kind: "system",
+    blockchainReference: null,
   },
   {
     id: "act-rathmines-2",
@@ -167,6 +172,7 @@ const rathminesActivity: ActivityEvent[] = [
     timestamp: "2026-03-15T09:05:00Z",
     actor: "Aoife Kelly",
     kind: "evidence",
+    blockchainReference: null,
   },
   {
     id: "act-rathmines-3",
@@ -175,6 +181,7 @@ const rathminesActivity: ActivityEvent[] = [
     timestamp: "2026-03-10T13:30:00Z",
     actor: "DepositLock",
     kind: "deposit",
+    blockchainReference: null,
   },
   {
     id: "act-rathmines-4",
@@ -183,6 +190,7 @@ const rathminesActivity: ActivityEvent[] = [
     timestamp: "2026-03-03T15:47:00Z",
     actor: "Aoife Kelly",
     kind: "agreement",
+    blockchainReference: null,
   },
 ];
 
@@ -194,6 +202,7 @@ const stoneybatterActivity: ActivityEvent[] = [
     timestamp: "2026-09-28T08:55:00Z",
     actor: "DepositLock",
     kind: "deposit",
+    blockchainReference: null,
   },
   {
     id: "act-stoneybatter-2",
@@ -202,6 +211,7 @@ const stoneybatterActivity: ActivityEvent[] = [
     timestamp: "2026-09-25T17:20:00Z",
     actor: "Liam Doherty",
     kind: "agreement",
+    blockchainReference: null,
   },
   {
     id: "act-stoneybatter-3",
@@ -210,6 +220,7 @@ const stoneybatterActivity: ActivityEvent[] = [
     timestamp: "2026-09-22T10:02:00Z",
     actor: "Niamh Fitzgerald",
     kind: "system",
+    blockchainReference: null,
   },
 ];
 
@@ -227,6 +238,7 @@ export const TENANCIES: Tenancy[] = [
     endDate: "2027-08-31",
     rentMonthly: 2100,
     depositAmount: 1800,
+    settlementToken: "USDC",
     status: "protected",
     recordStatus: "protected",
     filterGroup: "active",
@@ -239,6 +251,12 @@ export const TENANCIES: Tenancy[] = [
       {
         id: "ev-camden-1",
         room: "Kitchen",
+        category: "kitchen",
+        evidenceContext: "move_in",
+        deductionId: null,
+        storagePath: null,
+        mimeType: null,
+        fileSizeBytes: null,
         caption: "Worktops, appliances and tiling at move-in",
         capturedAt: "2026-09-01T10:12:00Z",
         capturedBy: "Sarah Byrne",
@@ -247,6 +265,12 @@ export const TENANCIES: Tenancy[] = [
       {
         id: "ev-camden-2",
         room: "Living room",
+        category: "living_room",
+        evidenceContext: "move_in",
+        deductionId: null,
+        storagePath: null,
+        mimeType: null,
+        fileSizeBytes: null,
         caption: "Walls, flooring and window seals",
         capturedAt: "2026-09-01T10:18:00Z",
         capturedBy: "Sarah Byrne",
@@ -255,6 +279,12 @@ export const TENANCIES: Tenancy[] = [
       {
         id: "ev-camden-3",
         room: "Main bedroom",
+        category: "bedroom",
+        evidenceContext: "move_in",
+        deductionId: null,
+        storagePath: null,
+        mimeType: null,
+        fileSizeBytes: null,
         caption: "Wardrobes, sockets and radiator",
         capturedAt: "2026-09-01T10:24:00Z",
         capturedBy: "Sarah Byrne",
@@ -276,6 +306,7 @@ export const TENANCIES: Tenancy[] = [
     endDate: "2027-03-14",
     rentMonthly: 2650,
     depositAmount: 2400,
+    settlementToken: "USDC",
     status: "active",
     recordStatus: "protected",
     filterGroup: "active",
@@ -288,6 +319,12 @@ export const TENANCIES: Tenancy[] = [
       {
         id: "ev-rathmines-1",
         room: "Living room",
+        category: "living_room",
+        evidenceContext: "move_in",
+        deductionId: null,
+        storagePath: null,
+        mimeType: null,
+        fileSizeBytes: null,
         caption: "Original cornicing and floorboards",
         capturedAt: "2026-03-15T09:05:00Z",
         capturedBy: "Aoife Kelly",
@@ -296,6 +333,12 @@ export const TENANCIES: Tenancy[] = [
       {
         id: "ev-rathmines-2",
         room: "Kitchen",
+        category: "kitchen",
+        evidenceContext: "move_in",
+        deductionId: null,
+        storagePath: null,
+        mimeType: null,
+        fileSizeBytes: null,
         caption: "Units, hob and extractor at move-in",
         capturedAt: "2026-03-15T09:11:00Z",
         capturedBy: "Aoife Kelly",
@@ -317,6 +360,7 @@ export const TENANCIES: Tenancy[] = [
     endDate: "2027-10-31",
     rentMonthly: 1750,
     depositAmount: 1500,
+    settlementToken: "USDC",
     status: "pending",
     recordStatus: "awaiting_deposit",
     filterGroup: "pending",

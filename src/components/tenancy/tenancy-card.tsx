@@ -42,7 +42,7 @@ export function TenancyCard({ tenancy, className }: TenancyCardProps) {
               {tenancy.locality} · {tenancy.eircode}
             </p>
           </div>
-          <StatusBadge status={tenancy.status} className="shrink-0" />
+          <StatusBadge status={tenancy.recordStatus} className="shrink-0" />
         </div>
 
         <dl className="grid grid-cols-2 gap-4 border-t border-line-soft pt-4">

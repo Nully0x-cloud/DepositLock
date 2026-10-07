@@ -155,13 +155,13 @@ isOneToOne: false
                   ]
                 },"evidence": {
                   Row: {
-                    "caption": string,"category": string,"created_at": string,"deduction_id": string | null,"evidence_context": string,"file_url": string | null,"id": string,"tenancy_id": string,"uploaded_by_profile_id": string
+                    "caption": string,"category": string,"created_at": string,"deduction_id": string | null,"evidence_context": string,"file_size_bytes": number | null,"file_url": string | null,"id": string,"mime_type": string | null,"tenancy_id": string,"uploaded_by_profile_id": string
                   }
                   Insert: {
-                    "caption": string,"category": string,"created_at"?: string,"deduction_id"?: string | null,"evidence_context": string,"file_url"?: string | null,"id"?: string,"tenancy_id": string,"uploaded_by_profile_id": string
+                    "caption": string,"category": string,"created_at"?: string,"deduction_id"?: string | null,"evidence_context": string,"file_size_bytes"?: number | null,"file_url"?: string | null,"id"?: string,"mime_type"?: string | null,"tenancy_id": string,"uploaded_by_profile_id": string
                   }
                   Update: {
-                    "caption"?: string,"category"?: string,"created_at"?: string,"deduction_id"?: string | null,"evidence_context"?: string,"file_url"?: string | null,"id"?: string,"tenancy_id"?: string,"uploaded_by_profile_id"?: string
+                    "caption"?: string,"category"?: string,"created_at"?: string,"deduction_id"?: string | null,"evidence_context"?: string,"file_size_bytes"?: number | null,"file_url"?: string | null,"id"?: string,"mime_type"?: string | null,"tenancy_id"?: string,"uploaded_by_profile_id"?: string
                   }
                   Relationships: [
                     {
@@ -192,13 +192,13 @@ isOneToOne: false
                   ]
                 },"notifications": {
                   Row: {
-                    "body": string | null,"created_at": string,"id": string,"profile_id": string,"read_at": string | null,"tenancy_id": string | null,"title": string,"type": string
+                    "body": string | null,"created_at": string,"event_key": string | null,"id": string,"profile_id": string,"read_at": string | null,"tenancy_id": string | null,"title": string,"type": string
                   }
                   Insert: {
-                    "body"?: string | null,"created_at"?: string,"id"?: string,"profile_id": string,"read_at"?: string | null,"tenancy_id"?: string | null,"title": string,"type": string
+                    "body"?: string | null,"created_at"?: string,"event_key"?: string | null,"id"?: string,"profile_id": string,"read_at"?: string | null,"tenancy_id"?: string | null,"title": string,"type": string
                   }
                   Update: {
-                    "body"?: string | null,"created_at"?: string,"id"?: string,"profile_id"?: string,"read_at"?: string | null,"tenancy_id"?: string | null,"title"?: string,"type"?: string
+                    "body"?: string | null,"created_at"?: string,"event_key"?: string | null,"id"?: string,"profile_id"?: string,"read_at"?: string | null,"tenancy_id"?: string | null,"title"?: string,"type"?: string
                   }
                   Relationships: [
                     {
@@ -460,8 +460,17 @@ isOneToOne: false
             "accept_tenancy_invitation":
 { Args: { "p_token": string }; Returns: Json
                            },
+"can_delete_unattached_evidence_object":
+{ Args: { "p_name": string }; Returns: boolean
+                           },
+"can_read_evidence_object":
+{ Args: { "p_name": string }; Returns: boolean
+                           },
 "can_read_property":
 { Args: { "p_profile_id": string,"p_property_id": string }; Returns: boolean
+                           },
+"can_upload_evidence_object":
+{ Args: { "p_name": string }; Returns: boolean
                            },
 "cancel_tenancy_invitation":
 { Args: { "p_invitation_id": string }; Returns: Json
@@ -474,6 +483,12 @@ isOneToOne: false
                            },
 "decline_tenancy_invitation":
 { Args: { "p_token": string }; Returns: Json
+                           },
+"evidence_path_tenancy_id":
+{ Args: { "p_name": string }; Returns: string
+                           },
+"evidence_storage_owner_matches":
+{ Args: { "p_name": string,"p_profile_id": string }; Returns: boolean
                            },
 "is_tenancy_landlord":
 { Args: { "p_profile_id": string,"p_tenancy_id": string }; Returns: boolean

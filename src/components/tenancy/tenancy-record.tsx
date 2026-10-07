@@ -10,7 +10,7 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { DepositFundingPanel } from "@/components/tenancy/deposit-funding-panel";
 import { DepositStatusBlock } from "@/components/tenancy/deposit-status-block";
 import { SettlementWorkflowPanel } from "@/components/tenancy/settlement-workflow-panel";
-import { EvidencePreview } from "@/components/tenancy/evidence-preview";
+import { EvidenceWorkspace } from "@/components/tenancy/evidence-workspace";
 import { IdentityRow } from "@/components/tenancy/identity-row";
 import { InvitationPanel } from "@/components/tenancy/invitation-panel";
 import { LifecycleTrack } from "@/components/tenancy/lifecycle-track";
@@ -18,6 +18,8 @@ import { PropertyImage } from "@/components/tenancy/property-image";
 import { SignInPrompt } from "@/components/wallet/sign-in-prompt";
 import { useRequireAuth } from "@/hooks/use-require-auth";
 import { useTenancyRecord } from "@/hooks/use-tenancy-record";
+import { explorerTransactionUrl } from "@/lib/solana/explorer";
+import { SOLANA_CLUSTER } from "@/lib/solana/config";
 import {
   cn,
   formatCurrency,
@@ -45,6 +47,7 @@ function ActivityList({
     timestamp: string;
     actor: string;
     kind: ActivityKind;
+    blockchainReference: string | null;
   }[];
 }) {
   if (items.length === 0) {
@@ -56,38 +59,48 @@ function ActivityList({
     );
   }
 
+  const groups = new Map<string, typeof items>();
+  for (const event of items) {
+    const date = new Date(event.timestamp);
+    const group = Number.isNaN(date.getTime())
+      ? "Earlier activity"
+      : date.toLocaleDateString("en-IE", { month: "long", year: "numeric" });
+    const current = groups.get(group) ?? [];
+    current.push(event);
+    groups.set(group, current);
+  }
+
   return (
-    <ol className="mt-5 space-y-0">
-      {items.map((event, index) => (
-        <li key={event.id} className="relative flex gap-4 pb-5 last:pb-0">
-          {index < items.length - 1 ? (
-            <span
-              aria-hidden
-              className="absolute left-[5px] top-4 h-[calc(100%-0.5rem)] w-px bg-line-soft"
-            />
-          ) : null}
-          <span
-            aria-hidden
-            className={cn(
-              "relative z-10 mt-1.5 size-2.5 shrink-0 rounded-full ring-4 ring-parchment",
-              activityDot[event.kind],
-            )}
-          />
-          <div className="min-w-0 flex-1">
-            <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
-              <p className="text-sm font-semibold text-ink">{event.title}</p>
-              <time
-                dateTime={event.timestamp}
-                className="text-xs text-subtle tabular-nums"
-              >
-                {formatDate(event.timestamp)}
-              </time>
-            </div>
-            <p className="mt-1 text-[0.8125rem] leading-relaxed text-muted">
-              {event.detail}
-            </p>
-            <p className="mt-1.5 text-xs text-subtle">{event.actor}</p>
-          </div>
+    <ol aria-label="Tenancy activity timeline" className="mt-5 space-y-6">
+      {[...groups].map(([group, events]) => (
+        <li key={group}>
+          <h3 className="mb-4 text-xs font-semibold uppercase tracking-[0.12em] text-subtle">{group}</h3>
+          <ol className="space-y-0">
+            {events.map((event, index) => (
+              <li key={event.id} className="relative flex gap-4 pb-5 last:pb-0">
+                {index < events.length - 1 ? (
+                  <span aria-hidden className="absolute left-[5px] top-4 h-[calc(100%-0.5rem)] w-px bg-line-soft" />
+                ) : null}
+                <span aria-hidden className={cn("relative z-10 mt-1.5 size-2.5 shrink-0 rounded-full ring-4 ring-parchment", activityDot[event.kind])} />
+                <div className="min-w-0 flex-1">
+                  <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
+                    <p className="text-sm font-semibold text-ink">{event.title}</p>
+                    <time dateTime={event.timestamp} className="text-xs text-subtle tabular-nums">{formatDate(event.timestamp)}</time>
+                  </div>
+                  {event.detail ? <p className="mt-1 text-[0.8125rem] leading-relaxed text-muted">{event.detail}</p> : null}
+                  <p className="mt-1.5 text-xs text-subtle">{event.actor}</p>
+                  {event.blockchainReference ? (
+                    <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1">
+                      <span className="text-[0.6875rem] font-medium text-moss">Verified on Solana</span>
+                      <a href={explorerTransactionUrl(event.blockchainReference, SOLANA_CLUSTER)} target="_blank" rel="noreferrer" className="inline-flex min-h-10 items-center text-xs font-semibold text-forest underline-offset-2 hover:underline focus-visible:outline-2 focus-visible:outline-forest">
+                        View transaction
+                      </a>
+                    </div>
+                  ) : null}
+                </div>
+              </li>
+            ))}
+          </ol>
         </li>
       ))}
     </ol>
@@ -196,7 +209,7 @@ export function TenancyRecord({ id }: { id: string }) {
               .join(" · ")}
           </p>
         </div>
-        <StatusBadge status={tenancy.status} className="shrink-0 self-start" />
+         <StatusBadge status={tenancy.recordStatus} className="shrink-0 self-start" />
       </header>
 
       <PropertyImage
@@ -208,7 +221,8 @@ export function TenancyRecord({ id }: { id: string }) {
 
       <DepositStatusBlock
         amount={tenancy.depositAmount}
-        status={tenancy.status}
+        status={tenancy.recordStatus}
+        settlementToken={tenancy.settlementToken}
         fundedAt={tenancy.fundedAt}
       />
 
@@ -288,41 +302,24 @@ export function TenancyRecord({ id }: { id: string }) {
         </div>
       </Card>
 
-      <div className="grid gap-5 lg:grid-cols-2">
-        <Card padding="lg">
-          <div className="flex items-center justify-between gap-3">
-            <div>
-              <p className="eyebrow text-subtle">Activity</p>
-              <h2 className="mt-2 text-base font-semibold text-ink">
-                Recent activity
-              </h2>
-            </div>
-            <Clock3 aria-hidden className="size-4 text-subtle" strokeWidth={1.8} />
-          </div>
-          <ActivityList items={tenancy.activity} />
-        </Card>
-
-        <Card padding="lg">
+      <Card padding="lg">
+        <div className="flex items-center justify-between gap-3">
           <div>
-            <p className="eyebrow text-subtle">Evidence</p>
+            <p className="eyebrow text-subtle">Activity</p>
             <h2 className="mt-2 text-base font-semibold text-ink">
-              Move-in evidence
+              Recent activity
             </h2>
-            <p className="mt-1.5 text-sm text-muted">
-              Recorded at handover and attached to this record.
-            </p>
           </div>
-          <div className="mt-5">
-            <EvidencePreview items={tenancy.evidence} />
-          </div>
-          {tenancy.evidence.length > 0 ? (
-            <p className="mt-4 text-xs text-subtle">
-              {tenancy.evidence.length} items · captured by{" "}
-              {tenancy.evidence[0]?.capturedBy}
-            </p>
-          ) : null}
-        </Card>
-      </div>
+          <Clock3 aria-hidden className="size-4 text-subtle" strokeWidth={1.8} />
+        </div>
+        <ActivityList items={tenancy.activity} />
+      </Card>
+
+      <EvidenceWorkspace
+        tenancy={tenancy}
+        viewerId={userId}
+        onRefresh={result.status === "ready" ? result.refresh : () => undefined}
+      />
 
       {userId ? (
         <SettlementWorkflowPanel

@@ -6,6 +6,17 @@ export type SupabaseConfig = {
   anonKey: string;
 };
 
+export function isValidSupabaseUrl(value: string): boolean {
+  try {
+    const url = new URL(value);
+    return (url.protocol === "https:" || url.protocol === "http:") &&
+      Boolean(url.hostname) && !url.username && !url.password && !url.search && !url.hash &&
+      (url.protocol === "https:" || ["localhost", "127.0.0.1", "::1", "[::1]"].includes(url.hostname));
+  } catch {
+    return false;
+  }
+}
+
 /**
  * Reads the public Supabase configuration.
  *
@@ -21,7 +32,7 @@ export function readSupabaseConfig(): SupabaseConfig | null {
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY?.trim()
   );
 
-  if (!url || !anonKey) return null;
+  if (!url || !isValidSupabaseUrl(url) || !anonKey) return null;
   return { url, anonKey };
 }
 

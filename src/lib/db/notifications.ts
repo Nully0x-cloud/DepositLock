@@ -1,6 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database, Notification } from "@/types/database";
-import type { RepositoryResult } from "./errors";
+import { mapRepositoryError, type RepositoryResult } from "./errors";
 import { fromResult } from "./from-result";
 import type { NotificationRecord } from "./models";
 
@@ -27,19 +27,33 @@ export function toNotificationRecord(row: Notification): NotificationRecord {
 export async function listNotificationsForProfile(
   client: Client,
   profileId: string,
-  options: { unreadOnly?: boolean } = {},
+  options: { unreadOnly?: boolean; limit?: number } = {},
 ): Promise<RepositoryResult<NotificationRecord[]>> {
   let query = client
     .from("notifications")
     .select("*")
     .eq("profile_id", profileId)
-    .order("created_at", { ascending: false });
+    .order("created_at", { ascending: false })
+    .limit(Math.min(Math.max(options.limit ?? 12, 1), 100));
 
   if (options.unreadOnly) query = query.is("read_at", null);
 
   const result = await fromResult<Notification[]>(query);
   if (!result.ok) return result;
   return { ok: true, data: result.data.map(toNotificationRecord) };
+}
+
+export async function getUnreadNotificationCount(
+  client: Client,
+  profileId: string,
+): Promise<RepositoryResult<number>> {
+  const { count, error } = await client
+    .from("notifications")
+    .select("id", { count: "exact", head: true })
+    .eq("profile_id", profileId)
+    .is("read_at", null);
+  if (error) return { ok: false, error: mapRepositoryError(error) };
+  return { ok: true, data: count ?? 0 };
 }
 
 /** Marks your own notification as read. */
@@ -49,9 +63,27 @@ export async function markNotificationRead(
   readAt: string = new Date().toISOString(),
 ): Promise<RepositoryResult<NotificationRecord>> {
   const result = await fromResult<Notification[]>(
-    client.from("notifications").update({ read_at: readAt }).eq("id", id).select("*"),
+    client.from("notifications").update({ read_at: readAt }).eq("id", id).is("read_at", null).select("*"),
     { emptyAsMissing: true },
   );
   if (!result.ok) return result;
   return { ok: true, data: toNotificationRecord(result.data[0]) };
+}
+
+/** Marks the caller's current unread inbox as read; RLS still scopes the write. */
+export async function markAllNotificationsRead(
+  client: Client,
+  profileId: string,
+  readAt: string = new Date().toISOString(),
+): Promise<RepositoryResult<number>> {
+  const result = await fromResult<Notification[]>(
+    client
+      .from("notifications")
+      .update({ read_at: readAt })
+      .eq("profile_id", profileId)
+      .is("read_at", null)
+      .select("id"),
+  );
+  if (!result.ok) return result;
+  return { ok: true, data: result.data.length };
 }

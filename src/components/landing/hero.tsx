@@ -18,7 +18,7 @@ function TenancyPreviewCard() {
     >
       <div className="flex items-center justify-between gap-3 border-b border-line-soft px-6 py-4">
         <p className="eyebrow text-subtle">Tenancy record</p>
-        <StatusBadge status={preview.status} />
+         <StatusBadge status={preview.recordStatus} />
       </div>
 
       <PropertyImage
@@ -122,6 +122,10 @@ export function Hero() {
                 Agreed settlement
               </li>
             </ul>
+            <p className="mt-4 text-xs leading-relaxed text-subtle">
+              Hackathon MVP on Solana Devnet with a test token. Challenged
+              deposits stay locked — DepositLock does not arbitrate disputes.
+            </p>
           </div>
 
           <TenancyPreviewCard />

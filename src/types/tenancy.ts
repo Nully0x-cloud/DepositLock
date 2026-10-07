@@ -33,6 +33,12 @@ export interface Party {
 export interface EvidenceItem {
   id: string;
   room: string;
+  category: string;
+  evidenceContext: "move_in" | "move_out" | "deduction" | "dispute";
+  deductionId: string | null;
+  storagePath: string | null;
+  mimeType: string | null;
+  fileSizeBytes: number | null;
   caption: string;
   capturedAt: string;
   capturedBy: string;
@@ -46,6 +52,7 @@ export interface ActivityEvent {
   timestamp: string;
   actor: string;
   kind: ActivityKind;
+  blockchainReference: string | null;
 }
 
 export interface ProtectionRule {
@@ -67,6 +74,7 @@ export interface Tenancy {
   endDate: string | null;
   rentMonthly: number;
   depositAmount: number;
+  settlementToken: string | null;
   status: TenancyStatus;
   /** Raw database status (`awaiting_tenant`, `awaiting_deposit`, …). */
   recordStatus: string;

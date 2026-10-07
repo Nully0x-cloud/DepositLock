@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
+import { AlertTriangle, Archive, ClipboardCheck, Clock3, CircleX, ShieldCheck } from "lucide-react";
 import { cn } from "@/lib/utils";
-import type { TenancyStatus } from "@/types/tenancy";
+import { tenancyStatusPresentation } from "@/lib/tenancy/status-presentation";
 
 export type BadgeTone =
   | "protected"
@@ -21,29 +22,23 @@ const tones: Record<BadgeTone, string> = {
   onDark: "bg-cream/12 text-cream border border-cream/25",
 };
 
-const statusTone: Record<TenancyStatus, BadgeTone> = {
-  protected: "protected",
-  active: "active",
-  pending: "pending",
-  disputed: "dispute",
-  closed: "closed",
-};
-
-const statusLabel: Record<TenancyStatus, string> = {
-  protected: "Protected",
-  active: "Active",
-  pending: "Pending",
-  disputed: "Under dispute",
-  closed: "Closed",
+const statusIcons = {
+  shield: ShieldCheck,
+  clock: Clock3,
+  review: ClipboardCheck,
+  alert: AlertTriangle,
+  archive: Archive,
+  cancel: CircleX,
 };
 
 type BadgeProps = {
   tone?: BadgeTone;
   className?: string;
+  title?: string;
   children: ReactNode;
 };
 
-export function Badge({ tone = "neutral", className, children }: BadgeProps) {
+export function Badge({ tone = "neutral", className, title, children }: BadgeProps) {
   return (
     <span
       className={cn(
@@ -51,6 +46,7 @@ export function Badge({ tone = "neutral", className, children }: BadgeProps) {
         tones[tone],
         className,
       )}
+      title={title}
     >
       {children}
     </span>
@@ -61,28 +57,15 @@ export function StatusBadge({
   status,
   className,
 }: {
-  status: TenancyStatus;
+  status: string;
   className?: string;
 }) {
+  const presentation = tenancyStatusPresentation(status);
+  const Icon = statusIcons[presentation.icon];
   return (
-    <Badge tone={statusTone[status]} className={className}>
-      <StatusDot status={status} />
-      {statusLabel[status]}
+    <Badge tone={presentation.tone as BadgeTone} className={className} title={presentation.description}>
+      <Icon aria-hidden className="size-3.5" strokeWidth={1.9} />
+      {presentation.label}
     </Badge>
-  );
-}
-
-export function StatusDot({ status }: { status: TenancyStatus }) {
-  const color =
-    status === "protected" || status === "active"
-      ? "bg-protected"
-    : status === "pending"
-      ? "bg-pending"
-      : status === "disputed"
-        ? "bg-dispute"
-        : "bg-closed";
-
-  return (
-    <span aria-hidden className={cn("size-1.5 rounded-full", color)} />
   );
 }

@@ -65,14 +65,14 @@ select is(
   'seed captures three move-in evidence rows'
 );
 select is(
-  (select count(*)::text from public.activity_events),
+  (select count(*)::text from public.activity_events where id::text like 'e0000001-%'),
   '7',
-  'seed records seven timeline events'
+  'seed retains its seven original timeline events alongside generated evidence activity'
 );
 select is(
-  (select count(*)::text from public.notifications),
+  (select count(*)::text from public.notifications where id::text like '90000001-%'),
   '3',
-  'seed records three notifications'
+  'seed retains its three starter notifications alongside generated notifications'
 );
 
 -- Constraints ----------------------------------------------------------------

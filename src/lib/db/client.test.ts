@@ -89,6 +89,22 @@ describe("isLocalSupabaseUrl", () => {
   });
 });
 
+describe("isValidSupabaseUrl", () => {
+  it("accepts hosted HTTPS and local loopback URLs", async () => {
+    const { isValidSupabaseUrl } = await loadClient();
+    expect(isValidSupabaseUrl(LOCAL_URL)).toBe(true);
+    expect(isValidSupabaseUrl("https://project-ref.supabase.co")).toBe(true);
+  });
+
+  it("rejects insecure hosted URLs, embedded credentials, and invalid URLs", async () => {
+    const { isValidSupabaseUrl } = await loadClient();
+    expect(isValidSupabaseUrl("http://project-ref.supabase.co")).toBe(false);
+    expect(isValidSupabaseUrl("https://user:secret@project-ref.supabase.co")).toBe(false);
+    expect(isValidSupabaseUrl("https://project-ref.supabase.co?token=private")).toBe(false);
+    expect(isValidSupabaseUrl("not a url")).toBe(false);
+  });
+});
+
 describe("getSupabaseBrowserClient", () => {
   it("stays null until Supabase is configured", async () => {
     const { getSupabaseBrowserClient } = await loadClient();

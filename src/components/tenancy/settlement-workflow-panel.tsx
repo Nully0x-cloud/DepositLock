@@ -5,6 +5,7 @@ import { AlertTriangle, Check, ExternalLink, Loader2, ShieldCheck, Wallet } from
 import { useCallback, useEffect, useMemo, useState, type FormEvent } from "react";
 import { Button } from "@/components/ui/button";
 import { FormAlert } from "@/components/tenancy/create/fields";
+import { EvidenceUploader } from "@/components/tenancy/evidence-uploader";
 import { useWalletIdentity } from "@/hooks/use-wallet-identity";
 import {
   getSettlementByTenancy,
@@ -137,6 +138,7 @@ export function SettlementWorkflowPanel({
     () => depositAmountToBaseUnits(tenancy.depositAmount, DEPOSIT_LOCK_MINT_DECIMALS),
     [tenancy.depositAmount],
   );
+  const evidenceVersion = tenancy.evidence.map((item) => item.id).join("|");
 
   useEffect(() => {
     let cancelled = false;
@@ -231,7 +233,7 @@ export function SettlementWorkflowPanel({
     return () => {
       cancelled = true;
     };
-  }, [reload, tenancy.id]);
+  }, [evidenceVersion, reload, tenancy.id]);
 
   const refresh = useCallback(() => setReload((value) => value + 1), []);
 
@@ -508,7 +510,7 @@ export function SettlementWorkflowPanel({
     (item) => item.evidenceContext === "move_out" && item.deductionId === null,
   ) ?? [];
   const challengeEvidenceOptions = dataReady?.evidence.filter(
-    (item) => item.evidenceContext === "move_out" || item.evidenceContext === "deduction",
+    (item) => item.evidenceContext !== "move_in",
   ) ?? [];
   const roleWalletReady = walletAddress !== null && walletMatches;
   const transactable = isTransactableCluster(SOLANA_CLUSTER) &&
@@ -526,7 +528,7 @@ export function SettlementWorkflowPanel({
 
   if (data.phase === "loading") {
     return (
-      <section aria-label="Settlement workflow" className="rounded-3xl border border-line bg-parchment p-5 sm:p-6">
+      <section id="settlement" aria-label="Settlement workflow" className="rounded-3xl border border-line bg-parchment p-5 sm:p-6">
         <p aria-busy="true" className="h-12 animate-pulse rounded-xl bg-sand">
           <span className="sr-only">Reading settlement state from Solana…</span>
         </p>
@@ -535,7 +537,7 @@ export function SettlementWorkflowPanel({
   }
   if (data.phase === "error") {
     return (
-      <section aria-label="Settlement workflow" className="rounded-3xl border border-line bg-parchment p-5 sm:p-6">
+      <section id="settlement" aria-label="Settlement workflow" className="rounded-3xl border border-line bg-parchment p-5 sm:p-6">
         <FormAlert>{data.message}</FormAlert>
         <Button type="button" variant="outline" size="sm" className="mt-3" onClick={refresh}>Refresh</Button>
       </section>
@@ -554,7 +556,7 @@ export function SettlementWorkflowPanel({
   const txUrl = transactionSignature ? explorerTransactionUrl(transactionSignature, SOLANA_CLUSTER) : null;
 
   return (
-    <section aria-label="Settlement workflow" className="rounded-3xl border border-line bg-parchment p-5 sm:p-6">
+    <section id="settlement" aria-label="Settlement workflow" className="rounded-3xl border border-line bg-parchment p-5 sm:p-6">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <p className="eyebrow text-subtle">Move-out settlement</p>
@@ -749,6 +751,13 @@ export function SettlementWorkflowPanel({
                       </div>
                     </fieldset>
                   ) : null}
+                  <EvidenceUploader
+                    tenancyId={tenancy.id}
+                    context="dispute"
+                    role="tenant"
+                    deductionId={currentDeduction?.id}
+                    onUploaded={() => { onRefresh(); refresh(); }}
+                  />
                   <Button type="submit" variant="outline" disabled={busy || !transactable}>
                     Challenge Deduction
                   </Button>
@@ -816,6 +825,13 @@ export function SettlementWorkflowPanel({
                   </div>
                 </fieldset>
               ) : null}
+              <EvidenceUploader
+                tenancyId={tenancy.id}
+                context="dispute"
+                role="tenant"
+                deductionId={currentDeduction?.id}
+                onUploaded={() => { onRefresh(); refresh(); }}
+              />
               <Button type="submit" variant="outline" disabled={busy}>Sync challenge record</Button>
             </form>
           ) : null}

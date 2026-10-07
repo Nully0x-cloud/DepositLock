@@ -159,7 +159,7 @@ export function OverviewView() {
             <h2 id="overview-active" className="text-sm font-semibold text-ink">
               Current tenancy record
             </h2>
-            <StatusBadge status={active.status} />
+            <StatusBadge status={active.recordStatus} />
           </div>
 
           <div className="grid gap-7 p-6 sm:p-7 lg:grid-cols-[1.1fr_0.9fr] lg:gap-10">

@@ -5,6 +5,8 @@ import { fromResult } from "./from-result";
 import type { EvidenceRecord } from "./models";
 
 type Client = SupabaseClient<Database>;
+export const TENANCY_EVIDENCE_BUCKET = "tenancy-evidence";
+const SIGNED_URL_SECONDS = 30 * 60;
 
 export function toEvidenceRecord(row: Evidence): EvidenceRecord {
   return {
@@ -14,7 +16,10 @@ export function toEvidenceRecord(row: Evidence): EvidenceRecord {
     evidenceContext: row.evidence_context as EvidenceRecord["evidenceContext"],
     deductionId: row.deduction_id,
     category: row.category,
+    mimeType: row.mime_type,
+    fileSizeBytes: row.file_size_bytes,
     fileUrl: row.file_url,
+    previewUrl: null,
     caption: row.caption,
     createdAt: row.created_at,
   };
@@ -33,7 +38,21 @@ export async function listEvidenceByTenancy(
       .order("created_at", { ascending: false }),
   );
   if (!result.ok) return result;
-  return { ok: true, data: result.data.map(toEvidenceRecord) };
+  const records = await Promise.all(result.data.map(async (row) => {
+    const record = toEvidenceRecord(row);
+    if (row.file_url?.startsWith("tenancies/")) {
+      const signed = await client.storage
+        .from(TENANCY_EVIDENCE_BUCKET)
+        .createSignedUrl(row.file_url, SIGNED_URL_SECONDS);
+      record.previewUrl = signed.error ? null : signed.data.signedUrl;
+    } else {
+      // Legacy local-demo assets are rooted under /public; uploaded private
+      // files always use a tenancy-scoped Storage path.
+      record.previewUrl = row.file_url;
+    }
+    return record;
+  }));
+  return { ok: true, data: records };
 }
 
 export type CreateEvidenceInput = {

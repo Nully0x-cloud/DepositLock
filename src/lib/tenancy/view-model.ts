@@ -197,16 +197,23 @@ export function toTenancy(input: TenancyMappingInput): Tenancy {
     timestamp: event.createdAt,
     actor: actorName(event.actorProfileId, directory),
     kind: activityKind(event.eventType),
+    blockchainReference: event.blockchainReference,
   }));
   activity.reverse();
 
   const evidence = (input.evidence ?? []).map((item): EvidenceItem => ({
     id: item.id,
     room: evidenceRoom(item.category),
+    category: item.category,
+    evidenceContext: item.evidenceContext,
+    deductionId: item.deductionId,
+    storagePath: item.fileUrl?.startsWith("tenancies/") ? item.fileUrl : null,
+    mimeType: item.mimeType,
+    fileSizeBytes: item.fileSizeBytes,
     caption: item.caption,
     capturedAt: item.createdAt,
     capturedBy: actorName(item.uploadedByProfileId, directory),
-    imageUrl: item.fileUrl ?? "",
+    imageUrl: item.previewUrl ?? "",
   }));
   evidence.reverse();
 
@@ -231,6 +238,7 @@ export function toTenancy(input: TenancyMappingInput): Tenancy {
     endDate: tenancy.endDate,
     rentMonthly: tenancy.monthlyRentAmount,
     depositAmount: tenancy.depositAmount,
+    settlementToken: tenancy.settlementToken,
     status: view.status,
     recordStatus: tenancy.status,
     filterGroup: view.filterGroup,

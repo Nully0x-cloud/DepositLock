@@ -9,6 +9,8 @@
     "lint": "eslint",
     "test": "vitest run",
     "test:siws": "node scripts/verify-siws.mjs",
+    "test:storage": "node scripts/test-evidence-storage.mjs",
+    "demo:fixtures": "node scripts/demo-fixtures.mjs",
     "devnet:init-config": "node scripts/devnet-init-config.mjs",
     "devnet:e2e": "node scripts/e2e-deposit-devnet.mjs",
     "solana:idl": "node scripts/sync-program-idl.mjs",

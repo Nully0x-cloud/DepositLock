@@ -1,52 +1,35 @@
 import { ShieldCheck } from "lucide-react";
 import { formatCurrency } from "@/lib/utils";
 import { ProtectionRules } from "@/components/tenancy/protection-rules";
-import type { TenancyStatus } from "@/types/tenancy";
+import { tenancyStatusPresentation } from "@/lib/tenancy/status-presentation";
 
 type DepositStatusBlockProps = {
   amount: number;
-  status: TenancyStatus;
+  status: string;
+  settlementToken: string | null;
   fundedAt?: string | null;
-};
-
-const statusCopy: Record<TenancyStatus, { label: string; note: string }> = {
-  protected: {
-    label: "Protected",
-    note: "Neither party can move these funds independently.",
-  },
-  active: {
-    label: "Protected",
-    note: "Neither party can move these funds independently.",
-  },
-  pending: {
-    label: "Awaiting funding",
-    note: "The deposit is protected once funding is confirmed.",
-  },
-  disputed: {
-    label: "Under dispute",
-    note: "The full deposit remains locked while the proposed deduction is disputed.",
-  },
-  closed: {
-    label: "Released",
-    note: "The agreed settlement has been executed and archived.",
-  },
 };
 
 export function DepositStatusBlock({
   amount,
   status,
+  settlementToken,
   fundedAt,
 }: DepositStatusBlockProps) {
-  const copy = statusCopy[status];
+  const presentation = tenancyStatusPresentation(status);
+  const protectedState = ["protected", "move_out_review", "deduction_proposed", "settlement_pending"].includes(status);
+  const disputed = status === "disputed";
+  const closed = status === "closed";
 
   return (
     <section
+      id="deposit"
       aria-label="Protected deposit"
       className="overflow-hidden rounded-3xl border border-forest-deep/40 bg-forest text-cream"
     >
       <div className="grid gap-8 p-7 sm:p-9 lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)] lg:gap-10">
         <div className="flex flex-col justify-center">
-          <p className="eyebrow text-sage">Protected deposit</p>
+          <p className="eyebrow text-sage">{closed ? "Original deposit" : "Deposit"}</p>
 
           <p className="mt-5 font-serif text-[3.5rem] leading-none tracking-[-0.03em] sm:text-[4.25rem]">
             {formatCurrency(amount)}
@@ -54,23 +37,29 @@ export function DepositStatusBlock({
 
           <p className="mt-5 inline-flex w-fit items-center gap-2.5 rounded-full border border-cream/25 bg-cream/8 px-4 py-2 text-[0.8125rem] font-semibold uppercase tracking-[0.24em]">
             <ShieldCheck aria-hidden className="size-4 text-cream" strokeWidth={2.2} />
-            {copy.label}
+            {disputed ? "Protected — under dispute" : presentation.label}
           </p>
 
           <p className="mt-5 max-w-sm text-[0.9375rem] leading-relaxed text-cream/70">
-            {copy.note}
+            {presentation.description}
           </p>
 
-          {fundedAt ? (
-            <p className="mt-4 text-xs text-cream/50">
-              Funded on{" "}
-              <time dateTime={fundedAt}>
-                {new Date(fundedAt).toLocaleDateString("en-IE", {
-                  day: "numeric",
-                  month: "long",
-                  year: "numeric",
-                })}
-              </time>
+          <dl className="mt-5 grid gap-3 border-t border-cream/15 pt-4 text-sm sm:grid-cols-2">
+            <div>
+              <dt className="text-xs text-cream/50">Settlement token</dt>
+              <dd className="mt-1 font-medium text-cream">{settlementToken ?? "USDC"} · Devnet test token</dd>
+            </div>
+            <div>
+              <dt className="text-xs text-cream/50">{fundedAt ? "Protected since" : "Funding"}</dt>
+              <dd className="mt-1 font-medium text-cream">
+                {fundedAt ? new Date(fundedAt).toLocaleDateString("en-IE", { day: "numeric", month: "long", year: "numeric" }) : "Not funded yet"}
+              </dd>
+            </div>
+          </dl>
+          {protectedState || disputed || closed ? (
+            <p className="mt-4 inline-flex items-center gap-2 text-xs font-medium text-cream/70">
+              <ShieldCheck aria-hidden className="size-4 text-sage" />
+              {closed ? "Settlement verified on Solana" : "Protected on Solana"}
             </p>
           ) : null}
         </div>

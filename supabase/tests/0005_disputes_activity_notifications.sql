@@ -115,9 +115,10 @@ select is(
 
 -- Activity timeline ----------------------------------------------------------
 
-select ok(
-  pg_temp.acting('11111111-1111-4111-8111-111111111111', $sql$insert into public.activity_events (tenancy_id, actor_profile_id, event_type, title, description) values ('cccccccc-cccc-4ccc-8ccc-cccccccccccc', '11111111-1111-4111-8111-111111111111', 'evidence_added', 'Move-out evidence added', 'Photographs of the kitchen and hallway') returning id::text$sql$) is not null,
-  'a participant can append to its own timeline'
+select throws_ok(
+  $sql$select pg_temp.acting('11111111-1111-4111-8111-111111111111', $q$insert into public.activity_events (tenancy_id, actor_profile_id, event_type, title, description) values ('cccccccc-cccc-4ccc-8ccc-cccccccccccc', '11111111-1111-4111-8111-111111111111', 'evidence_added', 'Move-out evidence added', 'Photographs of the kitchen and hallway') returning id::text$q$)$sql$,
+  '42501', null,
+  'clients cannot manufacture timeline events or notifications'
 );
 
 select throws_ok(
@@ -144,7 +145,7 @@ select throws_ok(
 -- Notifications --------------------------------------------------------------
 
 select is(
-  pg_temp.acting('11111111-1111-4111-8111-111111111111', $sql$select count(*)::text from public.notifications$sql$),
+  pg_temp.acting('11111111-1111-4111-8111-111111111111', $sql$select count(*)::text from public.notifications where id = '90000001-0000-4000-8000-000000000001'::uuid$sql$),
   '1',
   'a profile only sees its own notifications'
 );

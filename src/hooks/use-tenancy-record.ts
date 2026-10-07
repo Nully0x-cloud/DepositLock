@@ -11,7 +11,6 @@ import {
   listTenancyParticipants,
   getSupabaseBrowserClient,
 } from "@/lib/db";
-import { getTenancyById as getMockTenancyById } from "@/data/tenancies";
 import { toPartyDirectory, toTenancy } from "@/lib/tenancy/view-model";
 import { useProfileContext } from "@/providers/profile-provider";
 import type { Tenancy } from "@/types/tenancy";
@@ -125,10 +124,7 @@ export function useTenancyRecord(id: string): TenancyRecordResult {
   const retry = useMemo(() => () => setToken((value) => value + 1), []);
 
   if (!configured) {
-    const mock = getMockTenancyById(id);
-    return mock
-      ? { status: "ready", tenancy: mock, refresh: retry }
-      : { status: "unavailable" };
+    return { status: "error", message: "DepositLock is not connected to its Supabase project. Configure the required public environment variables and retry.", retry };
   }
   if (!ready) return { status: "loading" };
   if (!authenticated) return { status: "unauthenticated" };

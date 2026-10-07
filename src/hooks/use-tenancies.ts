@@ -8,7 +8,6 @@ import {
   listTenancySummaries,
   listVisibleParticipants,
 } from "@/lib/db";
-import { TENANCIES } from "@/data/tenancies";
 import { toPartyDirectory, toTenancy } from "@/lib/tenancy/view-model";
 import { useProfileContext } from "@/providers/profile-provider";
 import type { Tenancy } from "@/types/tenancy";
@@ -39,7 +38,7 @@ function errorCopy(cause: unknown): string {
  * States are explicit (§28): `loading` while Auth answers or rows load,
  * `unauthenticated` when there is no session yet, `error` with a retry for
  * failures, and `ready` with the list. Without Supabase configured this
- * returns the Phase 2 demo records unchanged.
+   * returns a clear configuration error instead of substituting mock records.
  */
 export function useTenancies(): TenanciesResult {
   const { ready, authenticated, configured, userId } = useRequireAuth();
@@ -105,7 +104,7 @@ export function useTenancies(): TenanciesResult {
   const key = configured && ready && authenticated && userId ? `${userId}:${token}` : null;
   const retry = useMemo(() => () => setToken((value) => value + 1), []);
 
-  if (!configured) return { status: "ready", tenancies: TENANCIES };
+  if (!configured) return { status: "error", message: "DepositLock is not connected to its Supabase project. Configure the required public environment variables and retry.", retry };
   if (!ready) return { status: "loading" };
   if (!authenticated) return { status: "unauthenticated" };
 

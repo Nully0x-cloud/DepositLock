@@ -79,35 +79,36 @@ select is(
   'an outsider sees no evidence'
 );
 
-select ok(
-  pg_temp.acting('11111111-1111-4111-8111-111111111111', $sql$insert into public.evidence (tenancy_id, uploaded_by_profile_id, evidence_context, category, file_url, caption) values ('cccccccc-cccc-4ccc-8ccc-cccccccccccc', '11111111-1111-4111-8111-111111111111', 'move_out', 'kitchen', '/evidence/move-out-kitchen.jpg', 'Kitchen at move-out') returning id::text$sql$) is not null,
-  'a participant can attach evidence to its own tenancy'
+select throws_ok(
+  $sql$select pg_temp.acting('11111111-1111-4111-8111-111111111111', $q$insert into public.evidence (tenancy_id, uploaded_by_profile_id, evidence_context, category, file_url, caption) values ('cccccccc-cccc-4ccc-8ccc-cccccccccccc', '11111111-1111-4111-8111-111111111111', 'move_out', 'kitchen', '/evidence/move-out-kitchen.jpg', 'Kitchen at move-out') returning id::text$q$)$sql$,
+  '42501', null,
+  'participants cannot create evidence metadata outside the verified upload route'
 );
 
 select throws_ok(
   $sql$select pg_temp.acting('44444444-4444-4444-8444-444444444444', $q$insert into public.evidence (tenancy_id, uploaded_by_profile_id, evidence_context, category, file_url, caption) values ('cccccccc-cccc-4ccc-8ccc-cccccccccccc', '44444444-4444-4444-8444-444444444444', 'move_out', 'kitchen', '/evidence/x.jpg', 'Not mine') returning id::text$q$)$sql$,
-  '23514',
+  '42501',
   null,
   'a non-participant cannot attach evidence to a tenancy'
 );
 
 select throws_ok(
   $sql$select pg_temp.acting('11111111-1111-4111-8111-111111111111', $q$insert into public.evidence (tenancy_id, uploaded_by_profile_id, evidence_context, category, file_url, caption) values ('dddddddd-dddd-4ddd-8ddd-dddddddddddd', '33333333-3333-4333-8333-333333333333', 'move_out', 'kitchen', '/evidence/x.jpg', 'Not by me') returning id::text$q$)$sql$,
-  '23514',
+  '42501',
   null,
   'evidence can only be uploaded by the acting profile'
 );
 
 select throws_ok(
   $sql$select pg_temp.acting('11111111-1111-4111-8111-111111111111', $q$insert into public.evidence (tenancy_id, uploaded_by_profile_id, evidence_context, category, caption) values ('cccccccc-cccc-4ccc-8ccc-cccccccccccc', '11111111-1111-4111-8111-111111111111', 'deduction', 'kitchen', 'No deduction linked') returning id::text$q$)$sql$,
-  '23514',
+  '42501',
   null,
   'deduction evidence must reference a deduction'
 );
 
 select throws_ok(
   $sql$select pg_temp.acting('11111111-1111-4111-8111-111111111111', $q$insert into public.evidence (tenancy_id, uploaded_by_profile_id, evidence_context, deduction_id, category, caption) values ('cccccccc-cccc-4ccc-8ccc-cccccccccccc', '11111111-1111-4111-8111-111111111111', 'deduction', 'd0000002-0000-4000-8000-000000000001', 'kitchen', 'Linked to the other tenancy') returning id::text$q$)$sql$,
-  '23503',
+  '42501',
   null,
   'the composite foreign key keeps deduction evidence on the same tenancy'
 );
