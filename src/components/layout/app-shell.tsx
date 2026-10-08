@@ -3,6 +3,7 @@
 import { Menu, UserRound, Wallet, X } from "lucide-react";
 import { usePathname } from "next/navigation";
 import { useEffect, useState, type ReactNode } from "react";
+import { BackendBadge } from "@/components/app/backend-badge";
 import { Brand } from "@/components/layout/brand";
 import { Container } from "@/components/layout/container";
 import { AppNavList, AppSidebar } from "@/components/layout/app-sidebar";
@@ -169,6 +170,7 @@ export function AppShell({ children }: AppShellProps) {
                   "Wallet not connected"
                 )}
               </p>
+              <BackendBadge />
             </div>
           </div>
         </div>

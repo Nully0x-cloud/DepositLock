@@ -12,6 +12,7 @@ import {
 } from "react";
 import { validateProfileForm } from "@/lib/profile/validation";
 import { profileStore } from "@/lib/profile/profile-store";
+import { selectVisibleProfile } from "@/lib/profile/visible-profile";
 import {
   createRemoteProfile,
   loadRemoteProfile,
@@ -67,7 +68,7 @@ export function ProfileProvider({ children }: { children: React.ReactNode }) {
     useAuth();
   const { wallets, publicKey } = useWallet();
 
-  const profile = useSyncExternalStore(
+  const snapshot = useSyncExternalStore(
     profileStore.subscribe,
     profileStore.getSnapshot,
     profileStore.getServerSnapshot,
@@ -202,6 +203,19 @@ export function ProfileProvider({ children }: { children: React.ReactNode }) {
 
   const reloadProfile = useCallback(() => setReloadToken((token) => token + 1), []);
   const clearProfile = useCallback(() => profileStore.clear(), []);
+
+  // Never render a snapshot synced for a different (or no) session: after
+  // a sign-in, wallet switch, or session restore the store still holds the
+  // previous identity until the remote row for the current auth.uid()
+  // finishes loading. Gating here keeps one wallet's profile from flashing
+  // under another wallet's session.
+  const profile = selectVisibleProfile({
+    snapshot,
+    configured: authConfigured,
+    authenticated: authStatus === "authenticated",
+    userId: user?.id ?? null,
+    syncedFor,
+  });
 
   const value = useMemo<ProfileContextValue>(
     () => ({

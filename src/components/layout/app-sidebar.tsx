@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { BackendBadge } from "@/components/app/backend-badge";
 import { Brand } from "@/components/layout/brand";
 import { APP_NAV, isActivePath } from "@/lib/navigation";
 import { cn } from "@/lib/utils";
@@ -75,6 +76,9 @@ export function AppSidebar() {
             <span aria-hidden className="size-1.5 rounded-full bg-forest" />
             Powered by Solana
           </p>
+          <div className="mt-2">
+            <BackendBadge />
+          </div>
         </div>
       </div>
     </aside>
